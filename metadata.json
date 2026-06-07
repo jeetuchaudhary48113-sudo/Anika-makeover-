@@ -1,0 +1,10 @@
+{
+  "name": "Anika Makeover Salon",
+  "description": "Premium luxury beauty, bridal hair, makeup, skincare, and makeover salon in Gorakhpur, UP. 5-Star rated salon in Taramandal.",
+  "requestFramePermissions": [
+    "geolocation"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

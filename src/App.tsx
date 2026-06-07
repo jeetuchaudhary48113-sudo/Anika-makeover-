@@ -1,0 +1,1134 @@
+import { useState, useEffect } from 'react';
+import { 
+  Sparkles, Star, Award, Users, Heart, Scissors, 
+  ShieldCheck, Instagram, MapPin, Phone, ArrowRight, 
+  ChevronLeft, ChevronRight, MessageSquare, BookmarkCheck,
+  Percent, ShieldCheck as SecureIcon, Clock
+} from 'lucide-react';
+
+import { SiteConfig, ServiceItem } from './types';
+import { DEFAULT_SITE_CONFIG } from './site-config';
+
+// Import newly created modular components
+import Header from './components/Header';
+import Footer from './components/Footer';
+import BookingForm from './components/BookingForm';
+import FAQAccordion from './components/FAQAccordion';
+import VideoPlayer from './components/VideoPlayer';
+import GalleryLightbox from './components/GalleryLightbox';
+import AdminPanel from './components/AdminPanel';
+
+export default function App() {
+  const [config, setConfig] = useState<SiteConfig>(DEFAULT_SITE_CONFIG);
+  const [activeTab, setActiveTab] = useState<string>('home');
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [activeTestimonial, setActiveTestimonial] = useState(0);
+  const [preSelectedService, setPreSelectedService] = useState('');
+  const [isAdminOpen, setIsAdminOpen] = useState(false);
+
+  // 1. Local Storage Syncing
+  useEffect(() => {
+    const cached = localStorage.getItem('site_config_anika');
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        let modified = false;
+
+        // Sync or override older default placeholder image if present
+        if (parsed.founder && (
+          parsed.founder.photo.includes('unsplash.com/photo-1573496359142') || 
+          parsed.founder.photo.includes('real_owner_photo_1780806708774.png') || 
+          parsed.founder.photo.includes('regenerated_image_1780807060954.jpg') ||
+          !parsed.founder.photo.startsWith('/src/assets/')
+        )) {
+          parsed.founder.photo = DEFAULT_SITE_CONFIG.founder.photo;
+          modified = true;
+        }
+        // Sync or override older default founder name if present
+        if (parsed.founder && parsed.founder.name === 'Anika Singh') {
+          parsed.founder.name = DEFAULT_SITE_CONFIG.founder.name;
+          modified = true;
+        }
+        // Add missing banner configs if they aren't in cache
+        if (!parsed.promoBanner) {
+          parsed.promoBanner = DEFAULT_SITE_CONFIG.promoBanner;
+          modified = true;
+        }
+        if (!parsed.welcomeBanner) {
+          parsed.welcomeBanner = DEFAULT_SITE_CONFIG.welcomeBanner;
+          modified = true;
+        } else if (
+          parsed.welcomeBanner.image.includes('unsplash.com') ||
+          parsed.welcomeBanner.image.includes('photo-1522337360788-8b13dee7a37e') ||
+          parsed.welcomeBanner.image.includes('regenerated_image_1780817423496') ||
+          !parsed.welcomeBanner.image.startsWith('/src/assets/images/regenerated_image')
+        ) {
+          parsed.welcomeBanner.image = DEFAULT_SITE_CONFIG.welcomeBanner.image;
+          modified = true;
+        }
+        if (!parsed.shopBanner) {
+          parsed.shopBanner = DEFAULT_SITE_CONFIG.shopBanner;
+          modified = true;
+        }
+
+        if (modified) {
+          localStorage.setItem('site_config_anika', JSON.stringify(parsed));
+        }
+        setConfig(parsed);
+      } catch (err) {
+        console.error('Failed to parse cached configuration, falling back to default.', err);
+      }
+    } else {
+      localStorage.setItem('site_config_anika', JSON.stringify(DEFAULT_SITE_CONFIG));
+    }
+
+    // Hash sync on load
+    const hash = window.location.hash.replace('#', '');
+    if (hash && ['home', 'about', 'services', 'gallery', 'testimonials', 'faq', 'contact', 'booking'].includes(hash)) {
+      setActiveTab(hash);
+      setTimeout(() => {
+        const element = document.getElementById(`${hash}-section`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 500);
+    }
+  }, []);
+
+  const handleConfigSave = (newConfig: SiteConfig) => {
+    setConfig(newConfig);
+    localStorage.setItem('site_config_anika', JSON.stringify(newConfig));
+  };
+
+  const handleConfigReset = () => {
+    setConfig(DEFAULT_SITE_CONFIG);
+    localStorage.removeItem('site_config_anika');
+  };
+
+  // 2. Automated Banner Sizing
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % config.banners.length);
+    }, 6000);
+    return () => clearInterval(timer);
+  }, [config.banners.length]);
+
+  // 3. Automated Reviews Settle
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setActiveTestimonial((prev) => (prev + 1) % config.testimonials.length);
+    }, 8500);
+    return () => clearInterval(timer);
+  }, [config.testimonials.length]);
+
+  // Extract top 10 popular services for Home page
+  const popularServices = config.services
+    .flatMap((cat) => cat.services.map((s) => ({ ...s, category: cat.category })))
+    .filter((s) => s.popular)
+    .slice(0, 10);
+
+  // Transition to specific service booking
+  const triggerQuickBooking = (serviceName: string) => {
+    setPreSelectedService(serviceName);
+    setActiveTab('booking');
+    const bForm = document.getElementById('booking-section');
+    if (bForm) {
+      bForm.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+  const nextSlide = () => {
+    setCurrentSlide((prev) => (prev + 1) % config.banners.length);
+  };
+
+  const prevSlide = () => {
+    setCurrentSlide((prev) => (prev - 1 + config.banners.length) % config.banners.length);
+  };
+
+  const nextTestimonial = () => {
+    setActiveTestimonial((prev) => (prev + 1) % config.testimonials.length);
+  };
+
+  const prevTestimonial = () => {
+    setActiveTestimonial((prev) => (prev - 1 + config.testimonials.length) % config.testimonials.length);
+  };
+
+  return (
+    <div className="bg-luxury-bg text-luxury-text min-h-screen relative font-sans">
+      
+      {/* 1. Header Navigation elements */}
+      <Header 
+        contact={config.contact} 
+        activeTab={activeTab} 
+        onTabChange={setActiveTab} 
+      />
+
+      {/* 2. Top Slider Hero Banner Segment */}
+      <section id="home-section" className="relative h-[85vh] sm:h-screen w-full bg-neutral-950 overflow-hidden">
+        {config.banners.map((slide, idx) => (
+          <div
+            key={slide.id}
+            className={`absolute inset-0 w-full h-full transition-opacity duration-1000 ease-in-out ${
+              idx === currentSlide ? 'opacity-100' : 'opacity-0 pointer-events-none'
+            }`}
+          >
+            {/* Visual background image with dark vignette mask */}
+            <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/55 to-black/30 z-10" />
+            <img
+              src={slide.image}
+              alt={slide.title}
+              referrerPolicy="no-referrer"
+              className="w-full h-full object-cover transform scale-102 transition-transform duration-6000"
+            />
+
+            {/* Slider Central Message Content */}
+            <div className="absolute inset-0 z-12 flex flex-col justify-center px-4 sm:px-8 md:px-12 lg:px-24 max-w-4xl text-white">
+              <span className="inline-flex items-center space-x-1.5 px-3 py-1 bg-[#D4AF37]/20 border border-accent-gold/40 text-accent-gold font-btn font-extrabold text-[9px] sm:text-[10px] uppercase tracking-widest rounded-full mb-4 w-max animate-pulse">
+                <Star size={10} className="fill-current text-accent-gold" />
+                <span>{slide.badge}</span>
+              </span>
+
+              <h2 className="font-serif-luxury text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-white mb-4 leading-tight sm:leading-none">
+                {slide.title}
+              </h2>
+
+              <p className="font-sans text-xs sm:text-base text-neutral-300 font-light max-w-xl mb-8 leading-relaxed">
+                {slide.subtitle}
+              </p>
+
+              {/* Responsive Action Buttons Group */}
+              <div className="flex flex-wrap items-center gap-3.5" id="hero-actions-container">
+                <button
+                  onClick={() => {
+                    setActiveTab('booking');
+                    const element = document.getElementById('booking-section');
+                    if (element) element.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  className="px-6 py-3.5 bg-gradient-to-r from-primary-gold to-[#a15a64] text-white font-btn font-bold uppercase tracking-wider text-[11px] rounded-full transition-transform duration-300 hover:scale-[1.03] shadow-lg shadow-primary-gold/15 cursor-pointer"
+                >
+                  Book Appointment
+                </button>
+
+                <a
+                  href={`tel:${config.contact.phone}`}
+                  className="px-6 py-3.5 bg-white/10 hover:bg-white/20 border border-white/20 hover:border-white/40 text-white font-btn font-bold uppercase tracking-wider text-[11px] rounded-full transition-all flex items-center space-x-2"
+                >
+                  <Phone size={13} />
+                  <span>Call Now</span>
+                </a>
+
+                <a
+                  href={`https://wa.me/${config.contact.whatsapp}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-6 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-btn font-bold uppercase tracking-wider text-[11px] rounded-full transition-all flex items-center space-x-2 shadow-lg shadow-emerald-950/15"
+                >
+                  <MessageSquare size={13} className="fill-current" />
+                  <span>WhatsApp Now</span>
+                </a>
+              </div>
+            </div>
+          </div>
+        ))}
+
+        {/* Previous Next Navigation icons for slider */}
+        <button
+          onClick={prevSlide}
+          className="absolute left-4 top-1/2 -translate-y-1/2 z-15 p-2 bg-black/40 hover:bg-black/70 rounded-full border border-white/10 text-white cursor-pointer transition-colors"
+          aria-label="Previous Slide"
+        >
+          <ChevronLeft size={18} />
+        </button>
+
+        <button
+          onClick={nextSlide}
+          className="absolute right-4 top-1/2 -translate-y-1/2 z-15 p-2 bg-black/40 hover:bg-black/70 rounded-full border border-white/10 text-white cursor-pointer transition-colors"
+          aria-label="Next Slide"
+        >
+          <ChevronRight size={18} />
+        </button>
+
+        {/* Indicators dot bar */}
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-15 flex items-center space-x-2.5">
+          {config.banners.map((_, idx) => (
+            <button
+              key={idx}
+              onClick={() => setCurrentSlide(idx)}
+              className={`w-2.5 h-2.5 rounded-full transition-all border duration-300 ${
+                idx === currentSlide ? 'bg-primary-gold border-primary-gold w-6' : 'bg-white/20 border-white/10 hover:bg-white/40'
+              }`}
+            />
+          ))}
+        </div>
+      </section>
+
+      {/* 3. Hero Introduction Segment */}
+      <section className="py-16 bg-[#FFFDF8]" id="introductory-hero">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          {/* Sizable Floating Indicators row */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 max-w-4xl mx-auto">
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-primary-gold/10 hover:border-primary-gold/20 hover:shadow-md transition-all">
+              <span className="font-serif-luxury text-3xl sm:text-4xl text-primary-gold font-bold block mb-1">
+                {config.founder.experienceYears}+
+              </span>
+              <span className="font-btn text-[10px] tracking-widest text-gray-400 uppercase font-extrabold block">
+                Years of Excellence
+              </span>
+            </div>
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-primary-gold/10 hover:border-primary-gold/20 hover:shadow-md transition-all">
+              <span className="font-serif-luxury text-3xl sm:text-4xl text-primary-gold font-bold block mb-1">
+                {config.founder.happyClientsCount.toLocaleString()}+
+              </span>
+              <span className="font-btn text-[10px] tracking-widest text-gray-400 uppercase font-extrabold block">
+                Happy Glamorous Clients
+              </span>
+            </div>
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-primary-gold/10 hover:border-primary-gold/20 hover:shadow-md transition-all">
+              <span className="font-serif-luxury text-3xl sm:text-4xl text-primary-gold font-bold block mb-1">
+                {config.founder.makeoversCount.toLocaleString()}+
+              </span>
+              <span className="font-btn text-[10px] tracking-widest text-gray-400 uppercase font-extrabold block">
+                Bridal Makeovers Completed
+              </span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Welcome Banner Section */}
+      {config.welcomeBanner?.active && (
+        <section id="welcome-banner-section" className="relative w-full bg-neutral-900 text-white overflow-hidden border-b border-primary-gold/15">
+          {/* Full responsive visible image without any cropping */}
+          <div className="w-full h-auto z-0 flex justify-center items-center">
+            <img
+              src={config.welcomeBanner.image}
+              alt="Welcome Banner Backdrop"
+              referrerPolicy="no-referrer"
+              className="w-full h-auto object-contain block opacity-100 scale-100"
+            />
+          </div>
+
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full hidden">
+            <div className="max-w-2xl space-y-6">
+              <span className="inline-flex items-center space-x-1 px-3 py-1 bg-primary-gold/25 border border-primary-gold/40 text-accent-gold text-[10px] font-btn font-extrabold uppercase tracking-widest rounded-md">
+                <Sparkles size={10} className="text-accent-gold" />
+                <span>{config.welcomeBanner.accentText}</span>
+              </span>
+              
+              <h3 className="font-serif-luxury text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-white uppercase leading-tight">
+                {config.welcomeBanner.title}
+              </h3>
+              
+              <p className="font-sans text-xs sm:text-sm text-neutral-300 font-light leading-relaxed max-w-xl">
+                {config.welcomeBanner.subtitle}
+              </p>
+
+              <div id="welcome-banner-action pt-2">
+                <button
+                  onClick={() => {
+                    setActiveTab('booking');
+                    const element = document.getElementById('booking-section');
+                    if (element) element.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  className="inline-flex items-center space-x-2 px-5 py-3 bg-gradient-to-r from-primary-gold to-[#a15a64] text-white font-btn font-bold uppercase tracking-wider text-[10px] rounded-full transition-transform duration-300 hover:scale-[1.03]"
+                >
+                  <span>Schedule Consultation</span>
+                  <ArrowRight size={12} />
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* 4. About Us Section with Animated Counters */}
+      <section id="about-section" className="py-20 bg-neutral-50 relative overflow-hidden">
+        {/* Background visual graphics */}
+        <div className="absolute top-1/2 left-0 w-96 h-96 bg-primary-gold/5 rounded-full blur-3xl -ml-48" />
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          
+          {/* Introductory Text Moved Below Welcome Banner */}
+          <div className="max-w-3xl mx-auto text-center space-y-4 mb-20 animate-fade-in">
+            <span className="font-sub-luxury italic text-primary-gold text-lg sm:text-2xl font-medium block">
+              Experience Radiance & Elegance
+            </span>
+            <h3 className="font-serif-luxury text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-luxury-text leading-tight uppercase font-medium">
+              Transform Your Beauty With Expert Salon Care
+            </h3>
+            <p className="font-sans text-sm sm:text-base text-gray-500 max-w-2xl mx-auto leading-relaxed">
+              Anika Makeover Salon delivers professional hairdressing, bridal cosmetics, specialized hydra facials, and grooming routines crafted by highly certified stylists. Step inside to look, feel, and embody your finest self.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+            
+            {/* Left Col: Captivating visuals with floating statistics */}
+            <div className="lg:col-span-5 relative">
+              <div className="relative rounded-3xl overflow-hidden aspect-[4/5] border-2 border-primary-gold/10 shadow-xl max-w-md mx-auto">
+                <img
+                  src="/src/assets/images/regenerated_image_1780807331392.jpg"
+                  alt="Anika Makeover Salon Interior"
+                  referrerPolicy="no-referrer"
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-neutral-900/60 to-transparent" />
+              </div>
+
+              {/* Floating Certification Badge */}
+              <div className="absolute -bottom-5 -right-2 sm:-right-6 bg-[#2C2C2C]/95 text-white p-5 rounded-2xl shadow-2xl border border-accent-gold/20 max-w-[210px] animate-bounce-slow">
+                <span className="text-accent-gold flex items-center space-x-1.5 mb-1.5">
+                  <Award size={18} />
+                  <span className="font-btn text-[10px] font-bold uppercase tracking-wider">Certified Safe</span>
+                </span>
+                <p className="font-sans text-[11px] text-neutral-300 leading-normal">
+                  Our premises run sterile, hospital-grade instrument sanitization protocols daily.
+                </p>
+              </div>
+            </div>
+
+            {/* Right Col: About us statements */}
+            <div className="lg:col-span-7 space-y-6">
+              <div className="space-y-1.5">
+                <span className="font-sub-luxury italic text-primary-gold text-lg font-medium block">
+                  Our Sacred Art of Beauty
+                </span>
+                <h3 className="font-serif-luxury text-3xl sm:text-4xl text-luxury-text font-bold uppercase tracking-wide">
+                  About Anika Makeover Salon
+                </h3>
+              </div>
+
+              <p className="font-sans text-sm text-gray-500 leading-relaxed font-light">
+                Founded in Gorakhpur, Anika Makeover Salon represents the pinnacle of luxury personalized salon care. We specialize in mapping facial symmetries, calculating customized hair nourishment, and compiling rich wedding makeovers utilizing top-tier international beauty lines.
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {[
+                  { title: 'Exquisite Artistry', text: 'Stunning HD & Airbrush results mapped by multi-certified cosmeticians.' },
+                  { title: 'Strict Clinical Hygiene', text: 'Fresh single-use kits, deep styling station sterilization.' },
+                  { title: 'Premium Global Line', text: 'Dermatologically cleared formulas from Estée Lauder, HUDA, MAC.' },
+                  { title: 'Transparent Pricing', text: 'Fair pricing layouts without hidden sub-charges on services.' }
+                ].map((item, idx) => (
+                  <div key={idx} className="flex items-start space-x-3 p-3 bg-white rounded-xl border border-primary-gold/10">
+                    <span className="p-1.5 rounded-lg bg-primary-gold/5 text-primary-gold mt-1 shrink-0">
+                      <ShieldCheck size={14} />
+                    </span>
+                    <div className="space-y-0.5">
+                      <h5 className="font-serif-luxury font-bold text-xs text-luxury-text">{item.title}</h5>
+                      <p className="font-sans text-[10px] text-gray-400 leading-normal font-light">{item.text}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Dynamic Animated Stats Counters Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 border-t border-primary-gold/10">
+                <div className="text-center sm:text-left">
+                  <span className="font-serif-luxury text-2xl sm:text-3xl text-primary-gold font-bold block">8.5k+</span>
+                  <span className="font-btn text-[9px] tracking-widest text-gray-400 uppercase font-semibold">Clients Served</span>
+                </div>
+                <div className="text-center sm:text-left">
+                  <span className="font-serif-luxury text-2xl sm:text-3xl text-primary-gold font-bold block">1.2k+</span>
+                  <span className="font-btn text-[9px] tracking-widest text-gray-400 uppercase font-semibold">Bridal Brides</span>
+                </div>
+                <div className="text-center sm:text-left">
+                  <span className="font-serif-luxury text-2xl sm:text-3xl text-primary-gold font-bold block">10+</span>
+                  <span className="font-btn text-[9px] tracking-widest text-gray-400 uppercase font-semibold">Years Active</span>
+                </div>
+                <div className="text-center sm:text-left">
+                  <span className="font-serif-luxury text-2xl sm:text-3xl text-primary-gold font-bold block">50+</span>
+                  <span className="font-btn text-[9px] tracking-widest text-gray-400 uppercase font-semibold">Specialties</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      {/* 5. Meet The Founder Section */}
+      <section className="py-20 bg-[#FFFDF8]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="glass-premium p-6 sm:p-10 md:p-12 rounded-3xl border border-primary-gold/15 shadow-xl max-w-4xl mx-auto relative overflow-hidden" id="founder-section">
+            <div className="absolute top-0 right-0 w-44 h-44 bg-primary-gold/5 rounded-full blur-2xl -mr-12 -mt-12" />
+
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-center relative z-10">
+              
+              {/* Left Portrait */}
+              <div className="md:col-span-4 max-w-xs mx-auto">
+                <div className="aspect-[3/4] rounded-2xl overflow-hidden border-2 border-primary-gold/10 shadow-lg relative bg-neutral-100">
+                  <img
+                    src={config.founder.photo}
+                    alt={config.founder.name}
+                    referrerPolicy="no-referrer"
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute bottom-3 left-3 right-3 bg-neutral-900/90 backdrop-blur-md text-white py-1.5 px-3 rounded-xl border border-white/10 text-center">
+                    <span className="font-btn text-[9px] uppercase font-bold tracking-widest text-accent-gold block leading-none">Senior expert</span>
+                    <span className="font-serif-luxury font-bold text-[11px]">{config.founder.name}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Founder message */}
+              <div className="md:col-span-8 space-y-4">
+                <div className="space-y-0.5">
+                  <span className="font-btn text-[10px] tracking-widest font-extrabold text-[#B76E79] uppercase block mb-1">Meet the Visionary</span>
+                  <h4 className="font-serif-luxury text-2xl font-bold text-luxury-text">{config.founder.name}</h4>
+                  <p className="font-sub-luxury italic text-xs sm:text-sm text-gray-500 font-semibold">{config.founder.designation}</p>
+                </div>
+
+                <p className="font-sans text-xs sm:text-sm text-gray-600 leading-relaxed font-light italic">
+                  "{config.founder.message}"
+                </p>
+
+                {/* Achievements horizontal statistics */}
+                <div className="grid grid-cols-3 gap-3 pt-3 border-t border-primary-gold/10 text-center md:text-left">
+                  <div>
+                    <span className="font-serif-luxury text-base sm:text-xl text-primary-gold font-bold block">{config.founder.experienceYears} Years</span>
+                    <span className="font-sans text-[9px] text-gray-400 uppercase font-semibold">Clinical Experience</span>
+                  </div>
+                  <div>
+                    <span className="font-serif-luxury text-base sm:text-xl text-primary-gold font-bold block">{config.founder.happyClientsCount.toLocaleString()}</span>
+                    <span className="font-sans text-[9px] text-gray-400 uppercase font-semibold">Clients Pampered</span>
+                  </div>
+                  <div>
+                    <span className="font-serif-luxury text-base sm:text-xl text-primary-gold font-bold block">{config.founder.makeoversCount.toLocaleString()}</span>
+                    <span className="font-sans text-[9px] text-gray-400 uppercase font-semibold">Brides Styled</span>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 6. Partner Products Ribbon */}
+      <section className="py-8 bg-neutral-900 border-y border-white/5 relative overflow-hidden text-center">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <span className="font-btn text-[9px] tracking-widest text-[#D4AF37] uppercase font-extrabold block mb-4">
+            Our Premium Line Partners
+          </span>
+          <div className="flex flex-wrap items-center justify-center gap-6 sm:gap-10 text-xs text-white/50 font-serif-luxury uppercase tracking-widest" id="partner-logos-ribbon">
+            <span>HUDA BEAUTY</span>
+            <span>MAC COSMETICS</span>
+            <span>ESTÉE LAUDER</span>
+            <span>L'ORÉAL PROFESSIONAL</span>
+            <span>KRYOLAN</span>
+            <span>RICA WAX</span>
+          </div>
+        </div>
+      </section>
+
+      {/* 7. Services Section (Home Page Top 10 Popular) */}
+      <section id="services-section" className="py-20 bg-neutral-50 relative">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          
+          <div className="text-center max-w-2xl mx-auto mb-12">
+            <span className="font-sub-luxury italic text-primary-gold text-base block mb-0.5">Popular Treatments</span>
+            <h3 className="font-serif-luxury text-3xl sm:text-4xl text-luxury-text font-bold uppercase tracking-wide mb-3">
+              Top 10 Popular Services
+            </h3>
+            <p className="font-sans text-xs sm:text-sm text-gray-400 font-light">
+              We curate the most chosen hair transformations, bridal glow packages, and cosmetic therapies favored by our elegant clientele in Taramandal.
+            </p>
+          </div>
+
+          {/* Grid Layout */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" id="top-services-grid">
+            {popularServices.map((srv, idx) => (
+              <div
+                key={srv.id}
+                className="group bg-[#FFFDF8] p-5 sm:p-6 rounded-2xl border border-primary-gold/10 hover:border-primary-gold/30 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 flex flex-col justify-between"
+              >
+                <div className="space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="w-10 h-10 rounded-xl bg-primary-gold/5 border border-primary-gold/15 text-primary-gold flex items-center justify-center font-bold text-xs uppercase font-btn">
+                      0{idx + 1}
+                    </span>
+                    <span className="text-[10px] text-gray-400 uppercase font-btn tracking-widest bg-neutral-50 px-2 py-0.5 rounded border border-gray-100">
+                      {srv.category}
+                    </span>
+                  </div>
+                  <h4 className="font-serif-luxury font-bold text-base text-luxury-text leading-tight tracking-wide group-hover:text-primary-gold transition-colors">
+                    {srv.title}
+                  </h4>
+                  <p className="font-sans text-xs text-gray-500 font-light leading-relaxed">
+                    {srv.description}
+                  </p>
+                </div>
+
+                <div className="pt-4 border-t border-primary-gold/5 flex items-center justify-between mt-4">
+                  <button
+                    onClick={() => triggerQuickBooking(srv.title)}
+                    className="flex items-center space-x-1 text-primary-gold hover:text-accent-gold text-[11px] font-btn font-bold uppercase tracking-wider cursor-pointer"
+                  >
+                    <span>Reserve Space</span>
+                    <ArrowRight size={12} className="transform group-hover:translate-x-1.5 transition-all" />
+                  </button>
+                  <span className="text-[9px] text-[#A15A64] font-semibold bg-[#FFF5F6] px-2 py-0.5 rounded uppercase font-btn tracking-widest">
+                    Best choice
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Sizable View All CTA */}
+          <div className="text-center mt-12">
+            <button
+              onClick={() => {
+                setActiveTab('all-services');
+                setTimeout(() => {
+                  const element = document.getElementById('all-services-header');
+                  if (element) element.scrollIntoView({ behavior: 'smooth' });
+                }, 300);
+              }}
+              className="px-8 py-4 bg-gradient-to-r from-[#D4AF37] to-[#B76E79] text-white font-btn font-bold uppercase tracking-widest text-[11px] rounded-full shadow-lg hover:shadow-[#D4AF37]/15 hover:scale-[1.02] cursor-pointer"
+            >
+              View All Services
+            </button>
+          </div>
+
+        </div>
+      </section>
+
+      {/* DEDICATED FULL SERVICES PAGE STATE */}
+      {activeTab === 'all-services' && (
+        <section className="py-20 bg-white" id="all-services-header">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            
+            <div className="text-center max-w-3xl mx-auto mb-16 space-y-2">
+              <span className="font-sub-luxury italic text-[#B76E79] text-lg block">Full Menu Catalog</span>
+              <h3 className="font-serif-luxury text-3xl sm:text-5xl text-luxury-text uppercase tracking-wide font-medium">
+                Our Complete Salon Services
+              </h3>
+              <p className="font-sans text-xs sm:text-sm text-gray-400 leading-relaxed font-light">
+                Scroll through our comprehensive, professional beauty care menu spanning haircuts, deep spas, waterproof party makeovers, facials, and certified salon care at your doorstep.
+              </p>
+            </div>
+
+            {/* Structured Columns Categories Grid */}
+            <div className="space-y-12">
+              {config.services.map((cat) => (
+                <div key={cat.category} className="space-y-4">
+                  <h4 className="font-serif-luxury text-xl font-bold text-primary-gold uppercase tracking-widest border-b border-primary-gold/15 pb-2">
+                    {cat.category}
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {cat.services.map((srv) => (
+                      <div
+                        key={srv.id}
+                        className="p-5 bg-[#FFFDF8] rounded-2xl border border-primary-gold/10 hover:border-primary-gold/30 shadow-xs hover:shadow-md transition-all flex flex-col justify-between"
+                      >
+                        <div className="space-y-1.5">
+                          <div className="flex items-start justify-between gap-2">
+                            <h5 className="font-serif-luxury font-bold text-sm sm:text-base text-luxury-text leading-tight">
+                              {srv.title}
+                            </h5>
+                            {srv.popular && (
+                              <span className="flex-shrink-0 text-[8px] bg-accent-gold/10 text-accent-gold font-btn font-extrabold uppercase px-1.5 py-0.5 rounded tracking-widest leading-none border border-accent-gold/25">
+                                Popular
+                              </span>
+                            )}
+                          </div>
+                          <p className="font-sans text-[11px] sm:text-xs text-gray-500 font-light leading-relaxed">
+                            {srv.description}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => triggerQuickBooking(srv.title)}
+                          className="mt-3.5 pt-2.5 border-t border-dashed border-primary-gold/5 flex items-center justify-between text-[10px] font-btn font-bold text-primary-gold uppercase tracking-widest hover:text-accent-gold transition-colors cursor-pointer w-full"
+                        >
+                          <span>Reserve Look</span>
+                          <span>→</span>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Quick Actions to jump back to Home */}
+            <div className="text-center mt-12">
+              <button
+                onClick={() => {
+                  setActiveTab('home');
+                  const element = document.getElementById('services-section');
+                  if (element) element.scrollIntoView({ behavior: 'smooth' });
+                }}
+                className="px-6 py-2.5 border border-primary-gold/30 hover:border-primary-gold text-primary-gold hover:bg-primary-gold/5 font-btn font-bold uppercase tracking-wider text-[11px] rounded-full cursor-pointer"
+              >
+                Back to Top popular
+              </button>
+            </div>
+
+          </div>
+        </section>
+      )}
+
+      {/* Custom Promo Banner Section */}
+      {config.promoBanner?.active && (
+        <section id="promo-banner-section" className="relative w-full bg-neutral-900 text-white overflow-hidden border-b border-primary-gold/15 border-t">
+          {/* Full responsive visible image without any cropping */}
+          <div className="w-full h-auto z-0 flex justify-center items-center">
+            <img
+              src={config.promoBanner.image}
+              alt="Promo Banner Backdrop"
+              referrerPolicy="no-referrer"
+              className="w-full h-auto object-contain block opacity-100 scale-100"
+            />
+          </div>
+
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 hidden">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-8">
+              <div className="max-w-2xl space-y-4">
+                {config.promoBanner.badge && (
+                  <span className="inline-flex items-center space-x-1.5 px-3 py-1 bg-accent-gold/20 border border-accent-gold/30 text-accent-gold text-[9px] font-btn font-extrabold uppercase tracking-wider rounded">
+                    <Percent size={10} />
+                    <span>{config.promoBanner.badge}</span>
+                  </span>
+                )}
+                
+                <h4 className="font-serif-luxury text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-white uppercase leading-tight">
+                  {config.promoBanner.title}
+                </h4>
+                
+                <p className="font-sans text-xs sm:text-sm text-neutral-300 font-light leading-relaxed">
+                  {config.promoBanner.subtitle}
+                </p>
+              </div>
+
+              {config.promoBanner.buttonText && (
+                <div className="shrink-0">
+                  <button
+                    onClick={() => {
+                      setActiveTab('booking');
+                      const element = document.getElementById('booking-section');
+                      if (element) element.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                    className="px-6 py-3.5 bg-gradient-to-r from-primary-gold to-[#a15a64] hover:from-[#b0872c] hover:to-[#8c4650] text-white font-btn font-bold uppercase tracking-wider text-[11px] rounded-xl transition-all shadow-lg hover:shadow-primary-gold/15 cursor-pointer whitespace-nowrap"
+                  >
+                    {config.promoBanner.buttonText}
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Custom Shop Banner Section */}
+      {config.shopBanner?.active && (
+        <section id="shop-banner-section" className="relative w-full bg-neutral-900 text-white overflow-hidden border-b border-primary-gold/15">
+          {/* Full responsive visible image without any cropping */}
+          <div className="w-full h-auto z-0 flex justify-center items-center">
+            <img
+              src={config.shopBanner.image}
+              alt="Shop Banner Backdrop"
+              referrerPolicy="no-referrer"
+              className="w-full h-auto object-contain block opacity-100 scale-100"
+            />
+          </div>
+
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 hidden">
+            <h4 className="font-serif-luxury text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-white uppercase leading-tight">
+              {config.shopBanner.title}
+            </h4>
+            <p className="font-sans text-xs sm:text-sm text-neutral-300 font-light leading-relaxed">
+              {config.shopBanner.subtitle}
+            </p>
+          </div>
+        </section>
+      )}
+
+      {/* 8. Why Choose Us Sections */}
+      <section id="whychoose-section" className="py-20 bg-[#FFFDF8] relative overflow-hidden">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          
+          <div className="text-center max-w-2xl mx-auto mb-16">
+            <span className="font-sub-luxury italic text-primary-gold text-base block">Guaranteed Luxury</span>
+            <h3 className="font-serif-luxury text-3xl sm:text-4xl text-luxury-text font-bold uppercase tracking-wide">
+              Why Choose Anika Makeover
+            </h3>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {[
+              {
+                title: 'Professional Beauty Experts',
+                text: 'Our team consists of certified stylists authorized by Kryolan, L’Oréal, and Krylon with extensive background working on film shoots & weddings.',
+                icon: <Award size={20} className="text-accent-gold" />
+              },
+              {
+                title: 'Premium Handpicked Products',
+                text: 'We respect your skin health and beauty by applying only cleared, premium brands including Bobbi Brown, NARS, Charlotte Tilbury and MAC.',
+                icon: <Heart size={20} className="text-primary-gold" />
+              },
+              {
+                title: 'Hygienic Environment',
+                text: 'We apply single-use combs, sanitized sheets, and clinical sterilizers before taking up scalp or cosmetic operations.',
+                icon: <ShieldCheck size={20} className="text-accent-gold" />
+              },
+              {
+                title: 'Affordable Transparent Pricing',
+                text: 'Luxury shouldn’t mean astronomical prices. We list and charge direct transparent service tags with no surprise add-ons.',
+                icon: <Percent size={18} className="text-primary-gold" />
+              },
+              {
+                title: 'Personalized Skin & Hair Care',
+                text: 'We begin our session by testing skin moisture levels and hair porosity, selecting packs matching your biologic needs.',
+                icon: <Sparkles size={20} className="text-accent-gold" />
+              },
+              {
+                title: '5-Star Direct Customer Satisfaction',
+                text: 'Earning hundreds of reviews with a pristine 5.0 Google rating in Gorakhpur validates our premium customer support.',
+                icon: <Star size={20} className="text-primary-gold fill-current" />
+              }
+            ].map((card, idx) => (
+              <div
+                key={idx}
+                className="bg-white p-6 sm:p-7 rounded-2xl border border-primary-gold/10 hover:border-primary-gold/25 shadow-sm hover:shadow-md transition-all space-y-4"
+              >
+                <span className="inline-flex p-3 rounded-xl bg-primary-gold/5 border border-primary-gold/10">
+                  {card.icon}
+                </span>
+                <h4 className="font-serif-luxury font-bold text-base text-luxury-text leading-tight tracking-wide">
+                  {card.title}
+                </h4>
+                <p className="font-sans text-xs text-gray-500 font-light leading-relaxed">
+                  {card.text}
+                </p>
+              </div>
+            ))}
+          </div>
+
+        </div>
+      </section>
+
+      {/* 9. Gallery Section */}
+      <section id="gallery-section" className="py-20 bg-neutral-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          
+          <div className="text-center max-w-2xl mx-auto mb-12">
+            <span className="font-sub-luxury italic text-primary-gold text-base block mb-0.5">Signature Archive</span>
+            <h3 className="font-serif-luxury text-3xl sm:text-4xl text-luxury-text font-bold uppercase tracking-wide">
+              Salon Portfolio Lookbook
+            </h3>
+            <p className="font-sans text-xs sm:text-sm text-gray-400 font-light mt-1.5">
+              Glance through our physical transformations. Standard bridal finishes, glowing cocktail highlights, and artistic nail enhancements.
+            </p>
+          </div>
+
+          {/* Emitted Lightbox component */}
+          <GalleryLightbox items={config.gallery} />
+
+        </div>
+      </section>
+
+      {/* 10. Video Section */}
+      <section id="videos-section" className="py-20 bg-[#FFFDF8]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          
+          <div className="text-center max-w-2xl mx-auto mb-12">
+            <span className="font-sub-luxury italic text-primary-gold text-base block">Transformation Reels</span>
+            <h3 className="font-serif-luxury text-3xl sm:text-4xl text-luxury-text font-bold uppercase tracking-wide">
+              Video Testimonials & Highlights
+            </h3>
+          </div>
+
+          {/* Video Player component */}
+          <VideoPlayer videos={config.videos} />
+
+        </div>
+      </section>
+
+      {/* 11. Text Testimonials Slider Carousel */}
+      <section id="testimonials-section" className="py-20 bg-neutral-900 border-y-2 border-accent-gold/20 text-white relative overflow-hidden">
+        {/* Glow backdrop overlays */}
+        <div className="absolute top-0 right-0 w-80 h-80 bg-primary-gold/5 rounded-full blur-3xl -mr-32 -mt-32" />
+
+        <div className="max-w-4xl mx-auto px-4 text-center relative z-10">
+          <span className="font-sub-luxury italic text-accent-gold text-lg sm:text-xl block mb-2">Our Testimonials</span>
+          <h3 className="font-serif-luxury text-2xl sm:text-4xl font-bold uppercase tracking-wide mb-8 text-neutral-100">
+            ★★★★★ Google 5.0 Star Rated Salon
+          </h3>
+
+          {/* Testimonial Active Slider Box */}
+          <div className="min-h-[190px] flex flex-col justify-center gap-4 px-4 sm:px-12 relative" id="reviews-slider-box">
+            <p className="font-sans text-sm sm:text-base text-neutral-300 font-light italic leading-relaxed">
+              "{config.testimonials[activeTestimonial].text}"
+            </p>
+
+            <div className="flex items-center justify-center space-x-3.5 mt-4">
+              <img
+                src={config.testimonials[activeTestimonial].photo}
+                alt={config.testimonials[activeTestimonial].name}
+                referrerPolicy="no-referrer"
+                className="w-11 h-11 rounded-full object-cover border border-accent-gold/40"
+              />
+              <div className="text-left leading-tight">
+                <h5 className="font-serif-luxury font-bold text-xs sm:text-sm text-white">
+                  {config.testimonials[activeTestimonial].name}
+                </h5>
+                <span className="text-[10px] text-accent-gold uppercase font-btn tracking-widest font-semibold block mt-0.5">
+                  {config.testimonials[activeTestimonial].role || 'Elegant Client'}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Slide Arrow Controls */}
+          <div className="flex items-center justify-center gap-4 mt-8">
+            <button
+              onClick={prevTestimonial}
+              className="p-2.5 rounded-full border border-white/10 hover:border-accent-gold text-white cursor-pointer transition-colors"
+              aria-label="Previous Review"
+            >
+              <ChevronLeft size={16} />
+            </button>
+            
+            <div className="flex items-center space-x-2">
+              {config.testimonials.map((_, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setActiveTestimonial(idx)}
+                  className={`w-2 h-2 rounded-full transition-all ${
+                    idx === activeTestimonial ? 'bg-accent-gold w-4' : 'bg-white/20'
+                  }`}
+                />
+              ))}
+            </div>
+
+            <button
+              onClick={nextTestimonial}
+              className="p-2.5 rounded-full border border-white/10 hover:border-accent-gold text-white cursor-pointer transition-colors"
+              aria-label="Next Review"
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
+
+        </div>
+      </section>
+
+      {/* 12. FAQ Section */}
+      <section id="faq-section" className="py-20 bg-neutral-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          
+          <div className="text-center max-w-2xl mx-auto mb-12">
+            <span className="font-sub-luxury italic text-primary-gold text-base block mb-0.5">Quick Assistance</span>
+            <h3 className="font-serif-luxury text-3xl sm:text-4xl text-luxury-text font-bold uppercase tracking-wide">
+              Frequently Asked Questions
+            </h3>
+          </div>
+
+          {/* Interactive Accordion FAQs */}
+          <FAQAccordion faqs={config.faqs} />
+
+        </div>
+      </section>
+
+      {/* 13. Instagram Simulation Feed Section */}
+      <section className="py-16 bg-[#FFFDF8]" id="instagram-section">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          
+          <div className="text-center max-w-2xl mx-auto mb-10">
+            <span className="font-btn text-[10px] tracking-widest text-[#B76E79] uppercase font-extrabold block mb-1">Follow Our Work</span>
+            <h4 className="font-serif-luxury text-2xl font-bold text-luxury-text uppercase tracking-wide">
+              Connect @anikamakeover45
+            </h4>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4" id="instagram-grid">
+            {[
+              {
+                url: 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&q=80&w=400',
+                likes: '1,421', loves: '322'
+              },
+              {
+                url: 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?auto=format&fit=crop&q=80&w=400',
+                likes: '895', loves: '114'
+              },
+              {
+                url: 'https://images.unsplash.com/photo-1560869713-7d0a29430f23?auto=format&fit=crop&q=80&w=400',
+                likes: '2,104', loves: '540'
+              },
+              {
+                url: 'https://images.unsplash.com/photo-1512496015851-a90fb38ba796?auto=format&fit=crop&q=80&w=400',
+                likes: '640', loves: '88'
+              }
+            ].map((post, idx) => (
+              <a
+                key={idx}
+                href={config.contact.instagram}
+                target="_blank"
+                rel="noreferrer"
+                referrerPolicy="no-referrer"
+                className="group relative aspect-square rounded-2xl overflow-hidden border border-gray-100 bg-neutral-100 block shadow-sm hover:shadow-md cursor-pointer"
+              >
+                <img
+                  src={post.url}
+                  alt="Anika Instagram Post"
+                  referrerPolicy="no-referrer"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                />
+                <div className="absolute inset-0 bg-neutral-900/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center space-x-4 text-white text-xs font-semibold">
+                  <span>❤️ {post.likes}</span>
+                  <span>💬 {post.loves}</span>
+                </div>
+              </a>
+            ))}
+          </div>
+
+          {/* Direct link button */}
+          <div className="text-center mt-8">
+            <a
+              href={config.contact.instagram}
+              target="_blank"
+              rel="noreferrer"
+              referrerPolicy="no-referrer"
+              className="inline-flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-500 text-white font-btn font-bold uppercase tracking-wider text-[10px] rounded-full shadow-md cursor-pointer hover:brightness-110"
+            >
+              <Instagram size={14} />
+              <span>Follow On Instagram</span>
+            </a>
+          </div>
+
+        </div>
+      </section>
+
+      {/* 14. Fully Functional Interactive Booking Desk Section */}
+      <section id="booking-section" className="py-20 bg-neutral-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <BookingForm 
+            services={config.services} 
+            preSelectedService={preSelectedService} 
+          />
+        </div>
+      </section>
+
+      {/* 15. Contact Section & Embed Maps Coordinates */}
+      <section id="contact-section" className="py-20 bg-[#FFFDF8] border-t border-primary-gold/10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            
+            {/* Left Col Contact specifications */}
+            <div className="space-y-6">
+              <div className="space-y-1.5">
+                <span className="font-sub-luxury italic text-primary-gold text-lg block">Open Daily</span>
+                <h3 className="font-serif-luxury text-3xl sm:text-4xl text-luxury-text font-bold uppercase tracking-wide">
+                  Anika Makeover Salon
+                </h3>
+                <p className="font-sans text-xs text-gray-500 font-light">
+                  Open 7 Days a week from <span className="font-semibold text-luxury-text">10:00 AM to 08:30 PM</span>. Secure parking slot is dedicated and completely free for salon clients.
+                </p>
+              </div>
+
+              {/* Stack elements */}
+              <div className="space-y-4 text-xs sm:text-sm text-gray-700">
+                <div className="flex items-start space-x-3.5 p-4 bg-white rounded-2xl border border-primary-gold/10">
+                  <MapPin size={18} className="text-primary-gold shrink-0 mt-0.5 animate-bounce-slow" />
+                  <div className="space-y-0.5">
+                    <h5 className="font-serif-luxury font-bold text-luxury-text text-sm mb-1">Our Location Address</h5>
+                    <p className="font-sans text-gray-500 leading-relaxed font-light">
+                      Budh Vihar Part-C, Near By Pani Ki Tanki, Gaighat Road, Taramandal, Gorakhpur - 273010, Uttar Pradesh, India
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-3.5 p-4 bg-white rounded-2xl border border-primary-gold/10">
+                  <Phone size={16} className="text-primary-gold shrink-0" />
+                  <div>
+                    <h5 className="font-serif-luxury font-bold text-luxury-text text-xs sm:text-sm">Contact Number</h5>
+                    <a href={`tel:${config.contact.phone}`} className="font-sans text-primary-gold font-bold">
+                      {config.contact.phoneFormatted}
+                    </a>
+                  </div>
+                </div>
+              </div>
+
+              {/* Contact Button Bar */}
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  onClick={() => {
+                    setActiveTab('booking');
+                    const element = document.getElementById('booking-section');
+                    if (element) element.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  className="px-5 py-3 bg-primary-gold hover:bg-primary-gold/90 text-white font-btn font-bold uppercase tracking-wider text-[10px] rounded-full shadow-md cursor-pointer transition-colors"
+                >
+                  Reserve Slot Now
+                </button>
+
+                <a
+                  href={`tel:${config.contact.phone}`}
+                  className="px-5 py-3 bg-white border border-primary-gold/25 hover:border-primary-gold text-primary-gold hover:bg-primary-gold/5 font-btn font-bold uppercase tracking-wider text-[10px] rounded-full transition-colors flex items-center space-x-1.5"
+                >
+                  <Phone size={12} />
+                  <span>Call Desk</span>
+                </a>
+
+                <a
+                  href={config.contact.googleMapsLink}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-5 py-3 bg-gradient-to-r from-accent-gold to-[#B76E79] text-white font-btn font-bold uppercase tracking-wider text-[10px] rounded-full shadow-md hover:brightness-110 flex items-center space-x-1.5"
+                >
+                  <MapPin size={12} />
+                  <span>Get Directions</span>
+                </a>
+              </div>
+            </div>
+
+            {/* Right Col: Google map frame */}
+            <div className="rounded-3xl overflow-hidden border border-primary-gold/15 shadow-xl bg-neutral-100 aspect-video h-[320px] lg:h-[350px]">
+              <iframe
+                title="Anika Makeover Salon Map Location"
+                src={config.contact.googleMapsEmbed}
+                width="100%"
+                height="100%"
+                style={{ border: 0 }}
+                allowFullScreen
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+              />
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      {/* 16. Brand Footer with deep links */}
+      <Footer 
+        contact={config.contact} 
+        onTabChange={setActiveTab} 
+        onAdminClick={() => setIsAdminOpen(true)}
+      />
+
+      {/* 17. Customizable Admin dashboard Settings Panel */}
+      <AdminPanel
+        currentConfig={config}
+        onSave={handleConfigSave}
+        onReset={handleConfigReset}
+        isOpen={isAdminOpen}
+        onClose={() => setIsAdminOpen(false)}
+      />
+
+      {/* 18. Floating WhatsApp help button widget on every page corner */}
+      <a
+        href={`https://wa.me/${config.contact.whatsapp}`}
+        target="_blank"
+        rel="noreferrer"
+        referrerPolicy="no-referrer"
+        className="fixed bottom-6 right-6 z-40 p-4 bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white rounded-full shadow-2xl flex items-center justify-center border-2 border-[#FFFDF8] hover:border-emerald-300 transition-all cursor-pointer animate-bounce-slow"
+        title="Direct Chat WhatsApp help"
+      >
+        <MessageSquare size={22} className="fill-current text-white" />
+      </a>
+
+    </div>
+  );
+}

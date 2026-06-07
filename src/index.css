@@ -1,0 +1,72 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Montserrat:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Poppins:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-primary-gold: #B76E79;
+  --color-secondary-rose: #F8D7DA;
+  --color-accent-gold: #D4AF37;
+  --color-luxury-bg: #FFFDF8;
+  --color-luxury-text: #2C2C2C;
+  
+  --font-serif-luxury: "Playfair Display", "Times New Roman", serif;
+  --font-sub-luxury: "Cormorant Garamond", "Times New Roman", serif;
+  --font-sans: "Poppins", system-ui, sans-serif;
+  --font-btn: "Montserrat", sans-serif;
+  
+  --animate-gold-shimmer: gold-shimmer 2.5s infinite linear;
+}
+
+@keyframes gold-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+html {
+  scroll-behavior: smooth;
+  background-color: #FFFDF8;
+  color: #2C2C2C;
+}
+
+::selection {
+  background-color: rgba(183, 110, 121, 0.2);
+  color: #B76E79;
+}
+
+.glass-premium {
+  background: rgba(255, 253, 248, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(183, 110, 121, 0.12);
+}
+
+.glass-dark {
+  background: rgba(44, 44, 44, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(212, 175, 55, 0.15);
+}
+
+.text-shimmer {
+  background: linear-gradient(to right, #B76E79 20%, #D4AF37 40%, #D4AF37 60%, #B76E79 80%);
+  background-size: 200% auto;
+  color: transparent;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: gold-shimmer 4s linear infinite;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #FFFDF8;
+}
+::-webkit-scrollbar-thumb {
+  background: #B76E79;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #D4AF37;
+}
+

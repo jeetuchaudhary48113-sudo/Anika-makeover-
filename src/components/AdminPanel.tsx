@@ -31,7 +31,7 @@ export default function AdminPanel({ currentConfig, onSave, onReset, isOpen, onC
       setIsAuthenticated(true);
       setErrorMsg('');
     } else {
-      setErrorMsg('Incorrect Passcode. Try "anika123"');
+      setErrorMsg('Incorrect Passcode. Access restricted.');
     }
   };
 
@@ -314,6 +314,34 @@ export default function AdminPanel({ currentConfig, onSave, onReset, isOpen, onC
       ...config,
       testimonials: config.testimonials.map(t => t.id === id ? { ...t, ...fields } as Testimonial : t)
     });
+  };
+
+  const handleGalleryItemUpload = (id: string, file: File) => {
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file (PNG, JPG, JPEG, etc.).');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      if (e.target?.result && typeof e.target.result === 'string') {
+        updateGalleryItem(id, { image: e.target.result });
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleTestimonialUpload = (id: string, file: File) => {
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file (PNG, JPG, JPEG, etc.).');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      if (e.target?.result && typeof e.target.result === 'string') {
+        updateTestimonial(id, { photo: e.target.result });
+      }
+    };
+    reader.readAsDataURL(file);
   };
 
   return (
@@ -1135,12 +1163,32 @@ export default function AdminPanel({ currentConfig, onSave, onReset, isOpen, onC
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         {config.gallery.map((item) => (
                           <div key={item.id} className="p-3 bg-white rounded-2xl border border-primary-gold/10 flex space-x-3 items-center">
-                            <img
-                              src={item.image}
-                              alt={item.title}
-                              referrerPolicy="no-referrer"
-                              className="w-14 h-14 object-cover rounded-xl border border-gray-100"
-                            />
+                            <div 
+                              onClick={() => document.getElementById(`gallery-file-input-${item.id}`)?.click()} 
+                              className="relative cursor-pointer group w-14 h-14 shrink-0 rounded-xl overflow-hidden border border-gray-200 hover:border-primary-gold"
+                              title="Click to Upload Custom Image"
+                            >
+                              <img
+                                src={item.image}
+                                alt={item.title}
+                                referrerPolicy="no-referrer"
+                                className="w-full h-full object-cover"
+                              />
+                              <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Upload size={14} className="text-white" />
+                              </div>
+                              <input
+                                id={`gallery-file-input-${item.id}`}
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => {
+                                  if (e.target.files && e.target.files[0]) {
+                                    handleGalleryItemUpload(item.id, e.target.files[0]);
+                                  }
+                                }}
+                                className="hidden"
+                              />
+                            </div>
                             <div className="flex-1 min-w-0 space-y-1.5">
                               <input
                                 type="text"
@@ -1171,7 +1219,7 @@ export default function AdminPanel({ currentConfig, onSave, onReset, isOpen, onC
                               <input
                                 type="text"
                                 value={item.image}
-                                placeholder="Unsplash Image URL"
+                                placeholder="Or Paste Image Link Link"
                                 onChange={(e) => updateGalleryItem(item.id, { image: e.target.value })}
                                 className="w-full text-[9px] text-gray-400 bg-transparent border-0 truncate focus:outline-none"
                               />
@@ -1202,12 +1250,32 @@ export default function AdminPanel({ currentConfig, onSave, onReset, isOpen, onC
                           <div key={t.id} className="p-4 bg-white rounded-2xl border border-primary-gold/15 space-y-3">
                             <div className="flex items-start justify-between gap-4">
                               <div className="flex items-center space-x-3 flex-1 min-w-0">
-                                <img
-                                  src={t.photo}
-                                  alt={t.name}
-                                  referrerPolicy="no-referrer"
-                                  className="w-10 h-10 object-cover rounded-full border border-gray-200"
-                                />
+                                <div 
+                                  onClick={() => document.getElementById(`testimonial-file-input-${t.id}`)?.click()} 
+                                  className="relative cursor-pointer group w-10 h-10 shrink-0 rounded-full overflow-hidden border border-gray-200 hover:border-primary-gold"
+                                  title="Click to Upload Custom Avatar"
+                                >
+                                  <img
+                                    src={t.photo}
+                                    alt={t.name}
+                                    referrerPolicy="no-referrer"
+                                    className="w-full h-full object-cover"
+                                  />
+                                  <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <Upload size={12} className="text-white" />
+                                  </div>
+                                  <input
+                                    id={`testimonial-file-input-${t.id}`}
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={(e) => {
+                                      if (e.target.files && e.target.files[0]) {
+                                        handleTestimonialUpload(t.id, e.target.files[0]);
+                                      }
+                                    }}
+                                    className="hidden"
+                                  />
+                                </div>
                                 <div className="flex-1 min-w-0">
                                   <input
                                     type="text"

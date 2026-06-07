@@ -169,7 +169,7 @@ export default function Footer({ contact, onTabChange, onAdminClick }: FooterPro
                 const element = document.getElementById('booking-form-card');
                 if (element) element.scrollIntoView({ behavior: 'smooth' });
                 // We'll hint they can click the Admin Panel link in the footer!
-                alert('🔑 TIP: To enter Admin Workspace and edit colors, menus or images, click the "Admin Panel" link centered at the very bottom of the website footer. Use Passcode "anika123"!');
+                alert('🔑 Owner Desk: To enter the Admin configuration workspace and customize layout, services, and pictures, click the "Admin Panel" link centered at the very bottom of this footer. Access requires the master administrator passcode.');
               }}
               className="text-neutral-600 hover:text-primary-gold underline underline-offset-2 transition-colors cursor-pointer text-[10px]"
             >

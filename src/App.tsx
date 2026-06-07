@@ -35,7 +35,9 @@ export default function App() {
         let modified = false;
 
         // Sync or override older default placeholder image if present
-        if (parsed.founder && (
+        // Ensure we do not overwrite any user-uploaded Base64 image (data:image/) or custom web image URL
+        const isCustomFounderPhoto = parsed.founder?.photo?.startsWith('data:image/') || parsed.founder?.photo?.startsWith('http');
+        if (parsed.founder && !isCustomFounderPhoto && (
           parsed.founder.photo.includes('unsplash.com/photo-1573496359142') || 
           parsed.founder.photo.includes('real_owner_photo_1780806708774.png') || 
           parsed.founder.photo.includes('regenerated_image_1780807060954.jpg') ||
@@ -57,14 +59,18 @@ export default function App() {
         if (!parsed.welcomeBanner) {
           parsed.welcomeBanner = DEFAULT_SITE_CONFIG.welcomeBanner;
           modified = true;
-        } else if (
-          parsed.welcomeBanner.image.includes('unsplash.com') ||
-          parsed.welcomeBanner.image.includes('photo-1522337360788-8b13dee7a37e') ||
-          parsed.welcomeBanner.image.includes('regenerated_image_1780817423496') ||
-          !parsed.welcomeBanner.image.startsWith('/src/assets/images/regenerated_image')
-        ) {
-          parsed.welcomeBanner.image = DEFAULT_SITE_CONFIG.welcomeBanner.image;
-          modified = true;
+        } else {
+          // Ensure we do not overwrite any user-uploaded Base64 welcome image or custom web URL
+          const isCustomWelcomeImage = parsed.welcomeBanner.image?.startsWith('data:image/') || parsed.welcomeBanner.image?.startsWith('http');
+          if (!isCustomWelcomeImage && (
+            parsed.welcomeBanner.image.includes('unsplash.com') ||
+            parsed.welcomeBanner.image.includes('photo-1522337360788-8b13dee7a37e') ||
+            parsed.welcomeBanner.image.includes('regenerated_image_1780817423496') ||
+            !parsed.welcomeBanner.image.startsWith('/src/assets/images/regenerated_image')
+          )) {
+            parsed.welcomeBanner.image = DEFAULT_SITE_CONFIG.welcomeBanner.image;
+            modified = true;
+          }
         }
         if (!parsed.shopBanner) {
           parsed.shopBanner = DEFAULT_SITE_CONFIG.shopBanner;

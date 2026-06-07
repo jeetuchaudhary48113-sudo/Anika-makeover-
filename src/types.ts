@@ -97,6 +97,57 @@ export interface CustomShopBanner {
   active: boolean;
 }
 
+export interface AboutUsSection {
+  badge: string;
+  title: string;
+  description: string;
+  image: string;
+  certifiedBadgeTitle: string;
+  certifiedBadgeText: string;
+  artistrySubtitle: string;
+  artistryTitle: string;
+  artistryDescription: string;
+  bullets: { title: string; text: string }[];
+}
+
+export interface WhyChooseSection {
+  subtitle: string;
+  title: string;
+  bullets: { title: string; text: string; icon: string }[];
+}
+
+export interface QuickStatsRibbon {
+  title: string;
+  items: string[];
+}
+
+export interface FooterContent {
+  description: string;
+  copyrightText: string;
+  usefulLinksTitle: string;
+  quickBookTitle: string;
+}
+
+export interface ThemeSettings {
+  primaryGold: string;
+  accentGold: string;
+  bgLight: string;
+  bgDark: string;
+  textLight: string;
+  textDark: string;
+  fontFamilySerif: string;
+  fontFamilySans: string;
+  fontSizeScale: number;
+  sectionPadding: 'small' | 'medium' | 'large';
+}
+
+export interface SectionToggle {
+  id: string;
+  name: string;
+  visible: boolean;
+  order: number;
+}
+
 export interface SiteConfig {
   banners: BannerSlide[];
   founder: FounderDetails;
@@ -109,4 +160,12 @@ export interface SiteConfig {
   promoBanner: CustomPromoBanner;
   welcomeBanner: CustomWelcomeBanner;
   shopBanner: CustomShopBanner;
+  aboutSection?: AboutUsSection;
+  whyChooseSection?: WhyChooseSection;
+  quickStatsRibbon?: QuickStatsRibbon;
+  footerContent?: FooterContent;
+  theme?: ThemeSettings;
+  sections?: SectionToggle[];
+  menuItems?: { id: string; label: string; visible: boolean }[];
 }
+

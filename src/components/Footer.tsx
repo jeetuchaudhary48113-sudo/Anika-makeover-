@@ -5,9 +5,15 @@ interface FooterProps {
   contact: ContactInfo;
   onTabChange: (tab: string) => void;
   onAdminClick: () => void;
+  footerContent?: {
+    description: string;
+    copyrightText: string;
+    usefulLinksTitle: string;
+    quickBookTitle: string;
+  };
 }
 
-export default function Footer({ contact, onTabChange, onAdminClick }: FooterProps) {
+export default function Footer({ contact, onTabChange, onAdminClick, footerContent }: FooterProps) {
   const handleNavClick = (target: string) => {
     onTabChange(target);
     const element = document.getElementById(`${target}-section`);
@@ -22,6 +28,9 @@ export default function Footer({ contact, onTabChange, onAdminClick }: FooterPro
       });
     }
   };
+
+  const defaultDesc = "Experience authentic five-star bridal makeovers, elite haircare, and glowing skin therapies in Gorakhpur. Our certified experts deliver clinical hygiene standards and premium beauty routines designed for self-pampering.";
+  const defaultCopyright = "© 2026 Anika Makeover Salon. All Rights Reserved. Created for Luxury beauty care in Gorakhpur, UP.";
 
   return (
     <footer className="bg-neutral-900 text-neutral-300 font-sans border-t-2 border-accent-gold/20 pt-16 pb-8 relative overflow-hidden" id="contact-footer">
@@ -43,7 +52,7 @@ export default function Footer({ contact, onTabChange, onAdminClick }: FooterPro
               </h3>
             </div>
             <p className="text-xs text-neutral-400 font-light leading-relaxed">
-              Experience authentic five-star bridal makeovers, elite haircare, and glowing skin therapies in Gorakhpur. Our certified experts deliver clinical hygiene standards and premium beauty routines designed for self-pampering.
+              {footerContent?.description || defaultDesc}
             </p>
             <div className="flex items-center space-x-3.5 pt-1.5" id="social-footer-group">
               <a
@@ -72,7 +81,7 @@ export default function Footer({ contact, onTabChange, onAdminClick }: FooterPro
           {/* Column 2: Sitemap Navigation links */}
           <div className="space-y-4">
             <h4 className="font-serif-luxury text-sm font-bold text-white tracking-widest uppercase border-b border-white/5 pb-2">
-              Sitemap Links
+              {footerContent?.usefulLinksTitle || "Sitemap Links"}
             </h4>
             <div className="grid grid-cols-2 gap-2 text-xs font-medium">
               {[
@@ -99,7 +108,7 @@ export default function Footer({ contact, onTabChange, onAdminClick }: FooterPro
           {/* Column 3: Top Hair & Bridal Services */}
           <div className="space-y-4">
             <h4 className="font-serif-luxury text-sm font-bold text-white tracking-widest uppercase border-b border-white/5 pb-2">
-              Our Specialties
+              {footerContent?.quickBookTitle || "Our Specialties"}
             </h4>
             <ul className="space-y-2 text-xs text-neutral-400 leading-none">
               {[
@@ -154,9 +163,7 @@ export default function Footer({ contact, onTabChange, onAdminClick }: FooterPro
         {/* Lower Border Copy block with hidden Portal */}
         <div className="mt-16 pt-8 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between text-[11px] text-neutral-500 font-light gap-4">
           <div className="flex flex-wrap items-center justify-center gap-1.5">
-            <span>© 2026 Anika Makeover Salon. All Rights Reserved.</span>
-            <span className="hidden sm:inline text-neutral-700">•</span>
-            <span>Created for Luxury beauty care in Gorakhpur, UP.</span>
+            <span>{footerContent?.copyrightText || defaultCopyright}</span>
           </div>
 
           {/* Discreet Admin Portal access button */}

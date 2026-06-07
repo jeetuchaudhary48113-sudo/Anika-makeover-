@@ -6,9 +6,10 @@ interface HeaderProps {
   contact: ContactInfo;
   activeTab: string;
   onTabChange: (tab: string) => void;
+  menuItems?: { id: string; label: string; visible: boolean }[];
 }
 
-export default function Header({ contact, activeTab, onTabChange }: HeaderProps) {
+export default function Header({ contact, activeTab, onTabChange, menuItems }: HeaderProps) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -21,7 +22,7 @@ export default function Header({ contact, activeTab, onTabChange }: HeaderProps)
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const navLinks = [
+  const rawLinks = [
     { label: 'Home', target: 'home' },
     { label: 'About', target: 'about' },
     { label: 'Services', target: 'services' },
@@ -30,6 +31,15 @@ export default function Header({ contact, activeTab, onTabChange }: HeaderProps)
     { label: 'FAQ', target: 'faq' },
     { label: 'Contact', target: 'contact' }
   ];
+
+  const navLinks = rawLinks.map((link) => {
+    const customItem = menuItems?.find(m => m.id === link.target);
+    return {
+      label: customItem?.label || link.label,
+      target: link.target,
+      visible: customItem ? customItem.visible : true
+    };
+  }).filter(link => link.visible);
 
   const handleNavClick = (target: string) => {
     setMobileMenuOpen(false);

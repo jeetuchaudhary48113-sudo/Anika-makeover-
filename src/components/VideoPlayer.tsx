@@ -6,6 +6,16 @@ interface VideoPlayerProps {
   videos: VideoTestimonial[];
 }
 
+function getYouTubeEmbedUrl(url: string) {
+  let videoId = '';
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+  const match = url.match(regExp);
+  if (match && match[2].length === 11) {
+    videoId = match[2];
+  }
+  return videoId ? `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=0&rel=0` : url;
+}
+
 export default function VideoPlayer({ videos }: VideoPlayerProps) {
   const [activeVideo, setActiveVideo] = useState<VideoTestimonial | null>(null);
   const [isMuted, setIsMuted] = useState(false);
@@ -26,6 +36,11 @@ export default function VideoPlayer({ videos }: VideoPlayerProps) {
     }
   };
 
+  const isYouTubeUrl = (url: string) => {
+    const lUrl = url.toLowerCase();
+    return lUrl.includes('youtube.com') || lUrl.includes('youtu.be') || lUrl.includes('/embed/');
+  };
+
   return (
     <div className="w-full">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -38,7 +53,7 @@ export default function VideoPlayer({ videos }: VideoPlayerProps) {
             {/* Thumbnail aspect-video container */}
             <div className="relative aspect-video w-full bg-neutral-900 overflow-hidden">
               <img
-                src={vid.thumbnail}
+                src={vid.thumbnail || 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&q=80&w=400'}
                 alt={vid.title}
                 referrerPolicy="no-referrer"
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
@@ -84,22 +99,24 @@ export default function VideoPlayer({ videos }: VideoPlayerProps) {
           />
 
           {/* Interactive Modal Frame */}
-          <div className="relative w-full max-w-4xl bg-black rounded-3xl overflow-hidden border border-accent-gold/25 shadow-2xl overflow-y-auto animate-fade-in">
+          <div className="relative w-full max-w-4xl bg-black rounded-3xl overflow-hidden border border-accent-gold/25 shadow-2xl overflow-y-auto animate-fade-in animate-scale-up">
             {/* Upper Action Bar */}
             <div className="absolute top-4 left-4 right-4 z-10 flex items-center justify-between pointer-events-none">
-              <span className="px-3.5 py-1.5 bg-black/60 backdrop-blur-md rounded-full text-white font-serif-luxury text-xs sm:text-sm font-semibold tracking-wide border border-white/10">
+              <span className="px-3.5 py-1.5 bg-black/60 backdrop-blur-md rounded-full text-white font-serif-luxury text-xs sm:text-sm font-semibold tracking-wide border border-white/10 max-w-[60%] truncate">
                 {activeVideo.title}
               </span>
 
               <div className="flex items-center space-x-2 pointer-events-auto">
-                <button
-                  type="button"
-                  onClick={toggleMute}
-                  className="p-2.5 bg-black/60 hover:bg-black/80 text-white rounded-full transition-color border border-white/10 hover:border-accent-gold cursor-pointer"
-                  title={isMuted ? 'Unmute' : 'Mute'}
-                >
-                  {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
-                </button>
+                {!isYouTubeUrl(activeVideo.videoUrl) && (
+                  <button
+                    type="button"
+                    onClick={toggleMute}
+                    className="p-2.5 bg-black/60 hover:bg-black/80 text-white rounded-full transition-color border border-white/10 hover:border-accent-gold cursor-pointer"
+                    title={isMuted ? 'Unmute' : 'Mute'}
+                  >
+                    {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={closeVideo}
@@ -113,29 +130,39 @@ export default function VideoPlayer({ videos }: VideoPlayerProps) {
 
             {/* Main Video Screen */}
             <div className="aspect-video w-full flex items-center justify-center bg-zinc-950 font-sans">
-              <video
-                ref={videoRef}
-                src={activeVideo.videoUrl}
-                autoPlay
-                controls
-                playsInline
-                loop
-                muted={isMuted}
-                referrerPolicy="no-referrer"
-                className="w-full h-full object-contain"
-              >
-                Your browser does not support HTML5 video streaming. Here is a direct link:{' '}
-                <a href={activeVideo.videoUrl} target="_blank" rel="noreferrer" className="text-primary-gold">
-                  Download Link
-                </a>
-              </video>
+              {isYouTubeUrl(activeVideo.videoUrl) ? (
+                <iframe
+                  src={getYouTubeEmbedUrl(activeVideo.videoUrl)}
+                  className="w-full h-full border-0 absolute inset-0 pt-12"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                  title={activeVideo.title}
+                />
+              ) : (
+                <video
+                  ref={videoRef}
+                  src={activeVideo.videoUrl}
+                  autoPlay
+                  controls
+                  playsInline
+                  loop
+                  muted={isMuted}
+                  referrerPolicy="no-referrer"
+                  className="w-full h-full object-contain"
+                >
+                  Your browser does not support HTML5 video streaming. Here is a direct link:{' '}
+                  <a href={activeVideo.videoUrl} target="_blank" rel="noreferrer" className="text-primary-gold">
+                    Download Link
+                  </a>
+                </video>
+              )}
             </div>
 
             {/* Detailed Context Bar */}
             <div className="bg-neutral-900 border-t border-white/5 px-6 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-neutral-300">
               <div className="flex items-center space-x-2.5 text-xs font-sans">
                 <AlertCircle size={14} className="text-accent-gold shrink-0" />
-                <span>Experience live cinematic results. All cosmetics are authentic & water-tested.</span>
+                <span>Experience live wedding cosmetics lookbooks & transformations.</span>
               </div>
               <button
                 type="button"

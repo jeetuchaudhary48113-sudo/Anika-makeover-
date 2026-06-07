@@ -241,5 +241,82 @@ export const DEFAULT_SITE_CONFIG: SiteConfig = {
     title: 'Visit Our Luxury Flagship Salon',
     subtitle: 'Experience state-of-the-art beauty facilities in Gorakhpur designed for ultimate pampering and medical-grade visual hygiene protocols.',
     active: true
-  }
+  },
+  aboutSection: {
+    badge: 'Experience Radiance & Elegance',
+    title: 'Transform Your Beauty With Expert Salon Care',
+    description: 'Anika Makeover Salon delivers professional hairdressing, bridal cosmetics, specialized hydra facials, and grooming routines crafted by highly certified stylists. Step inside to look, feel, and embody your finest self.',
+    image: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&q=80&w=800',
+    certifiedBadgeTitle: 'Certified Safe',
+    certifiedBadgeText: 'Our premises run sterile, hospital-grade instrument sanitization protocols daily.',
+    artistrySubtitle: 'Our Sacred Art of Beauty',
+    artistryTitle: 'About Anika Makeover Salon',
+    artistryDescription: 'Founded in Gorakhpur, Anika Makeover Salon represents the pinnacle of luxury personalized salon care. We specialize in mapping facial symmetries, calculating customized hair nourishment, and compiling rich wedding makeovers utilizing top-tier international beauty lines.',
+    bullets: [
+      { title: 'Exquisite Artistry', text: 'Stunning HD & Airbrush results mapped by multi-certified cosmeticians.' },
+      { title: 'Strict Clinical Hygiene', text: 'Fresh single-use kits, deep styling station sterilization.' },
+      { title: 'Premium Global Line', text: 'Dermatologically cleared formulas from Estée Lauder, HUDA, MAC.' },
+      { title: 'Transparent Pricing', text: 'Fair pricing layouts without hidden sub-charges on services.' }
+    ]
+  },
+  whyChooseSection: {
+    subtitle: 'THE ANIKA TOUCH',
+    title: 'Why Choose Our Salon',
+    bullets: [
+      { title: 'Certified Experts Only', text: 'Our professionals are trained periodically under elite cosmetic directors and hold active international treatment credentials.', icon: 'Award' },
+      { title: 'Clinically Sterilized Space', text: 'We maintain hospital-grade sanitation, vacuum-sealed tool envelopes, and single-use protective fabrics.', icon: 'ShieldCheck' },
+      { title: '100% Genuine Products', text: 'Absolutely zero copycats or dilutions. We use direct manufacturer imports from Huda, MAC, Moroccanoil, and L’Oréal Professionnel.', icon: 'Sparkles' },
+      { title: 'Tailored Facemap Analysis', text: 'Every haircut, coloring, or bridal makeup palette is mathematically coordinated against your skin undertones & bone composition.', icon: 'Heart' }
+    ]
+  },
+  quickStatsRibbon: {
+    title: 'Our Premium Line Partners',
+    items: ['HUDA BEAUTY', 'MAC COSMETICS', 'MOROCCANOIL', 'L’ORÉAL PROFESSIONNEL', 'KRYOLAN', 'ESTÉE LAUDER']
+  },
+  footerContent: {
+    description: 'गोरखपुर का सबसे शानदार और भरोसेमंद लक्ज़री मेकअप स्टूडियो और ब्यूटी पार्लर। Experience luxurious beauty, hair care, and professional bridal services curated by Menka Singh.',
+    copyrightText: '© 2026 Anika Makeover Salon. All Rights Reserved. Crafted for elite luxury bridal results in Gorakhpur.',
+    usefulLinksTitle: 'Useful Directory',
+    quickBookTitle: 'Online Reservations'
+  },
+  theme: {
+    primaryGold: '#B76E79',
+    accentGold: '#D4AF37',
+    bgLight: '#FFFDF8',
+    bgDark: '#0A0A0A',
+    textLight: '#2C2C2C',
+    textDark: '#FFFFFF',
+    fontFamilySerif: 'Playfair Display',
+    fontFamilySans: 'Poppins',
+    fontSizeScale: 1.0,
+    sectionPadding: 'medium'
+  },
+  sections: [
+    { id: 'banners', name: 'Hero Sliders', visible: true, order: 10 },
+    { id: 'intro', name: 'Intro Stats Box', visible: true, order: 20 },
+    { id: 'welcome', name: 'Welcome Banner', visible: true, order: 30 },
+    { id: 'about', name: 'About Us Section', visible: true, order: 40 },
+    { id: 'founder', name: 'Founder Message', visible: true, order: 50 },
+    { id: 'ribbon', name: 'Premium Partners Ribbon', visible: true, order: 60 },
+    { id: 'services', name: 'Services Grid & List', visible: true, order: 70 },
+    { id: 'promo_banner', name: 'Promo Banner', visible: true, order: 80 },
+    { id: 'shop_banner', name: 'Visit Flagship Banner', visible: true, order: 90 },
+    { id: 'why_choose', name: 'Why Choose Us', visible: true, order: 100 },
+    { id: 'gallery', name: 'Portfolio Lookbook', visible: true, order: 110 },
+    { id: 'videos', name: 'Video Testimonial Reels', visible: true, order: 120 },
+    { id: 'testimonials', name: 'Text Testimonials Carousel', visible: true, order: 130 },
+    { id: 'faqs', name: 'FAQ Accordeons', visible: true, order: 140 },
+    { id: 'instagram', name: 'Instagram Grid', visible: true, order: 150 },
+    { id: 'booking', name: 'Appointment Booking Form', visible: true, order: 160 },
+    { id: 'contact', name: 'Map & Contact Details', visible: true, order: 170 }
+  ],
+  menuItems: [
+    { id: 'home', label: 'Home', visible: true },
+    { id: 'about', label: 'About', visible: true },
+    { id: 'services', label: 'Services', visible: true },
+    { id: 'gallery', label: 'Gallery', visible: true },
+    { id: 'testimonials', label: 'Reviews', visible: true },
+    { id: 'faq', label: 'FAQ', visible: true },
+    { id: 'contact', label: 'Contact', visible: true }
+  ]
 };

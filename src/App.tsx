@@ -920,7 +920,7 @@ export default function App() {
                 </div>
 
                 {/* Right Col map iframe */}
-                <div className="rounded-3xl overflow-hidden border border-primary-gold/15 shadow-xl bg-neutral-100 aspect-video h-[320px] lg:h-[350px]">
+                <div className="rounded-3xl overflow-hidden border border-primary-gold/15 shadow-xl bg-neutral-100 w-full h-[250px] sm:h-[320px] lg:h-[350px]">
                   <iframe
                     title="Anika Makeover Salon Map Location"
                     src={config.contact.googleMapsEmbed}
@@ -943,7 +943,7 @@ export default function App() {
   };
 
   return (
-    <div className="bg-luxury-bg text-luxury-text min-h-screen relative font-sans">
+    <div className="bg-luxury-bg text-luxury-text min-h-screen relative font-sans overflow-x-hidden w-full">
       
       {/* 1. Header Navigation elements */}
       <Header 

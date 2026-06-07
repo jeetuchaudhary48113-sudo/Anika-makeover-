@@ -21,7 +21,11 @@
   100% { background-position: 200% 0; }
 }
 
-html {
+html,
+body,
+#root {
+  max-width: 100%;
+  overflow-x: hidden;
   scroll-behavior: smooth;
   background-color: #FFFDF8;
   color: #2C2C2C;

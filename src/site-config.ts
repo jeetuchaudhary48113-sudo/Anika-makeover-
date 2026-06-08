@@ -25,7 +25,7 @@ export const DEFAULT_SITE_CONFIG: SiteConfig = {
     }
   ],
   founder: {
-    photo: '/src/assets/images/regenerated_image_1780807328147.jpg',
+    photo: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=400',
     name: 'Menka Singh',
     designation: 'Founder & Senior Beauty Expert',
     message: 'Welcome to Anika Makeover Salon. With over a decade of dedication to the art of beauty, hair styling, and bridal makeup, my team and I believe that every makeover is an expression of self-love. We combine cutting-edge international standards, certified organic premium products, and clinical hygiene protocols to give you an unparalleled pampering experience right here in Gorakhpur. Step in and let us elevate your natural radiance.',
@@ -230,7 +230,7 @@ export const DEFAULT_SITE_CONFIG: SiteConfig = {
     active: true
   },
   welcomeBanner: {
-    image: '/src/assets/images/regenerated_image_1780817549559.jpg',
+    image: 'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&q=80&w=1200',
     title: 'Experience Personalized Glamour',
     subtitle: 'Step into Anika Makeover Salon, where your vision meets our premium brush strokes. Under the exquisite guidance of Menka Singh, we customize every detail to celebrate your unique charm.',
     accentText: 'Gorakhpur’s Premium Destination',

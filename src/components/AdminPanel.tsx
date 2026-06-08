@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Lock, Settings, Save, RotateCcw, X, Edit3, Trash2, Plus, Check, MapPin, Phone, MessageSquare, Instagram, FileText, Upload, Percent, Sparkles, Eye, EyeOff, ArrowUp, ArrowDown, Award, ShieldCheck, Heart } from 'lucide-react';
 import { SiteConfig, ServiceItem, GalleryItem, Testimonial, VideoTestimonial } from '../types';
-import { uploadImageToStorage } from '../firebase';
+import { uploadImageToStorage, isFirebasePlaceholder } from '../firebase';
 
 interface AdminPanelProps {
   currentConfig: SiteConfig;
@@ -658,6 +658,29 @@ export default function AdminPanel({ currentConfig, onSave, onReset, isOpen, onC
                 {/* Main Form Fields Edit Area */}
                 <div className="flex-1 overflow-y-auto p-6 space-y-6">
                   
+                  {isFirebasePlaceholder && (
+                    <div id="firebase-status-banner" className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-xs text-amber-800 space-y-2 animate-fade-in font-sans">
+                      <div className="flex items-center gap-2 font-bold select-none">
+                        <span className="p-1.5 bg-amber-200 text-amber-900 rounded-lg">⚙️</span>
+                        <span>Complete Your Cloud Configuration</span>
+                      </div>
+                      <p className="leading-relaxed">
+                        Your application is running in fully compliant Firebase Storage & Firestore mode! To enable live synchronization, please replace the placeholders in <code className="bg-amber-100 px-1 py-0.5 rounded font-mono font-bold text-amber-900">firebase-applet-config.json</code> with your actual project keys:
+                      </p>
+                      <div className="bg-amber-100/50 p-3 rounded-xl font-mono text-[10px] text-amber-900 grid grid-cols-1 sm:grid-cols-2 gap-2 border border-amber-200/50 select-all">
+                        <div>• apiKey</div>
+                        <div>• authDomain</div>
+                        <div>• projectId</div>
+                        <div>• storageBucket</div>
+                        <div>• messagingSenderId</div>
+                        <div>• appId</div>
+                      </div>
+                      <p className="text-[10px] text-amber-700 leading-normal">
+                        Note: Once you supply these, all uploaded headers, gallery reels, founder quotes, and customer reviews will sync live and look identical on every phone and PC!
+                      </p>
+                    </div>
+                  )}
+
                   {/* TAB 1: CONTACTS */}
                   {activeTab === 'contact' && (
                     <div className="space-y-4 animate-fade-in">
@@ -895,7 +918,7 @@ export default function AdminPanel({ currentConfig, onSave, onReset, isOpen, onC
                                 type="text"
                                 value={config.founder.photo}
                                 onChange={(e) => updateFounder('photo', e.target.value)}
-                                placeholder="https://unsplash.com/... or base64 data"
+                                placeholder="https://images.unsplash.com/... or public cloud image URL"
                                 className="w-full px-3 py-1.5 bg-white border border-primary-gold/20 focus:outline-none focus:border-primary-gold rounded-xl font-sans text-xs"
                               />
                             </div>

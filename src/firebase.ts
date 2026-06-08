@@ -6,10 +6,20 @@ import { SiteConfig } from './types';
 import firebaseConfig from '../firebase-applet-config.json';
 
 // Initialize Firebase
-const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId || '(default)');
-export const auth = getAuth(app);
-export const storage = getStorage(app);
+const isFirebasePlaceholder = 
+  !firebaseConfig || 
+  firebaseConfig.projectId === 'PLACEHOLDER_PROJECT_ID' || 
+  firebaseConfig.apiKey === 'PLACEHOLDER_API_KEY' || 
+  !firebaseConfig.apiKey;
+
+if (isFirebasePlaceholder) {
+  console.warn('Firebase configuration contains PLACEHOLDERS. Seamlessly falling back to local client state and localStorage synchronization.');
+}
+
+const app = !isFirebasePlaceholder ? initializeApp(firebaseConfig) : null;
+export const db = app ? getFirestore(app, firebaseConfig.firestoreDatabaseId || '(default)') : null;
+export const auth = app ? getAuth(app) : null;
+export const storage = app ? getStorage(app) : null;
 
 // 1. Error Handling following the Firebase integration skill structure
 export enum OperationType {
@@ -37,10 +47,10 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   const errInfo: FirestoreErrorInfo = {
     error: error instanceof Error ? error.message : String(error),
     authInfo: {
-      userId: auth.currentUser?.uid || null,
-      email: auth.currentUser?.email || null,
-      emailVerified: auth.currentUser?.emailVerified || null,
-      isAnonymous: auth.currentUser?.isAnonymous || null,
+      userId: auth?.currentUser?.uid || null,
+      email: auth?.currentUser?.email || null,
+      emailVerified: auth?.currentUser?.emailVerified || null,
+      isAnonymous: auth?.currentUser?.isAnonymous || null,
     },
     operationType,
     path
@@ -72,6 +82,18 @@ function sanitizeForFirestore(obj: any): any {
 
 // 2. Fetch config from Firestore
 export async function loadSiteConfigFromDb(): Promise<SiteConfig | null> {
+  if (isFirebasePlaceholder || !db) {
+    try {
+      const cached = localStorage.getItem('site_config_anika');
+      if (cached) {
+        return JSON.parse(cached) as SiteConfig;
+      }
+    } catch (e) {
+      console.error('Failed to load site config from fallback localStorage:', e);
+    }
+    return null;
+  }
+
   const docPath = 'site_config/anika';
   try {
     const docRef = doc(db, 'site_config', 'anika');
@@ -90,6 +112,15 @@ export async function loadSiteConfigFromDb(): Promise<SiteConfig | null> {
 
 // 3. Save config to Firestore
 export async function saveSiteConfigToDb(config: SiteConfig): Promise<void> {
+  if (isFirebasePlaceholder || !db) {
+    try {
+      localStorage.setItem('site_config_anika', JSON.stringify(config));
+    } catch (e) {
+      console.error('Failed to save site config to fallback localStorage:', e);
+    }
+    return;
+  }
+
   const docPath = 'site_config/anika';
   try {
     const docRef = doc(db, 'site_config', 'anika');
@@ -110,6 +141,21 @@ export async function uploadImageToStorage(file: File, folder: string = 'images'
   const extension = file.name.split('.').pop() || 'jpg';
   const fileName = `${folder}/${Date.now()}_${Math.random().toString(36).substring(2, 10)}.${extension}`;
   
+  if (isFirebasePlaceholder || !storage) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        if (e.target?.result && typeof e.target.result === 'string') {
+          resolve(e.target.result);
+        } else {
+          reject(new Error('Failed to read file as DataURL inside fallback'));
+        }
+      };
+      reader.onerror = () => reject(new Error('FileReader errored out'));
+      reader.readAsDataURL(file);
+    });
+  }
+
   try {
     const fileRef = ref(storage, fileName);
     const snapshot = await uploadBytes(fileRef, file);

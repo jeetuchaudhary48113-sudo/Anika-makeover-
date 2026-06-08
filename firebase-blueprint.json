@@ -1,0 +1,26 @@
+{
+  "entities": {
+    "SiteConfig": {
+      "title": "SiteConfig",
+      "description": "Global website configuration, styling structure, images, videos, and services",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Identifier for the document"
+        },
+        "config": {
+          "type": "string",
+          "description": "JSON string representations of the full SiteConfig configuration"
+        }
+      },
+      "required": ["id", "config"]
+    }
+  },
+  "firestore": {
+    "/site_config/{id}": {
+      "schema": "SiteConfig",
+      "description": "Collection for housing global website configuration documents"
+    }
+  }
+}

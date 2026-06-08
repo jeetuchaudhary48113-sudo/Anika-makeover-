@@ -18,6 +18,8 @@ import VideoPlayer from './components/VideoPlayer';
 import GalleryLightbox from './components/GalleryLightbox';
 import AdminPanel from './components/AdminPanel';
 
+import { loadSiteConfigFromDb, saveSiteConfigToDb } from './firebase';
+
 export default function App() {
   const [config, setConfig] = useState<SiteConfig>(DEFAULT_SITE_CONFIG);
   const [activeTab, setActiveTab] = useState<string>('home');
@@ -25,95 +27,104 @@ export default function App() {
   const [activeTestimonial, setActiveTestimonial] = useState(0);
   const [preSelectedService, setPreSelectedService] = useState('');
   const [isAdminOpen, setIsAdminOpen] = useState(false);
+  const [dbLoading, setDbLoading] = useState(true);
 
-  // 1. Local Storage Syncing
+  // 1. Cloud Database Syncing
   useEffect(() => {
-    const cached = localStorage.getItem('site_config_anika');
-    if (cached) {
+    async function initDbConfig() {
       try {
-        const parsed = JSON.parse(cached);
-        let modified = false;
+        const cloudConfig = await loadSiteConfigFromDb();
+        if (cloudConfig) {
+          let modified = false;
+          const parsed = { ...cloudConfig };
 
-        // Sync or override older default placeholder image if present
-        const isCustomFounderPhoto = parsed.founder?.photo?.startsWith('data:image/') || parsed.founder?.photo?.startsWith('http');
-        if (parsed.founder && !isCustomFounderPhoto && (
-          parsed.founder.photo.includes('unsplash.com/photo-1573496359142') || 
-          parsed.founder.photo.includes('real_owner_photo_1780806708774.png') || 
-          parsed.founder.photo.includes('regenerated_image_1780807060954.jpg') ||
-          !parsed.founder.photo.startsWith('/src/assets/')
-        )) {
-          parsed.founder.photo = DEFAULT_SITE_CONFIG.founder.photo;
-          modified = true;
-        }
-        // Sync or override older default founder name if present
-        if (parsed.founder && parsed.founder.name === 'Anika Singh') {
-          parsed.founder.name = DEFAULT_SITE_CONFIG.founder.name;
-          modified = true;
-        }
-        // Add missing banner configs if they aren't in cache
-        if (!parsed.promoBanner) {
-          parsed.promoBanner = DEFAULT_SITE_CONFIG.promoBanner;
-          modified = true;
-        }
-        if (!parsed.welcomeBanner) {
-          parsed.welcomeBanner = DEFAULT_SITE_CONFIG.welcomeBanner;
-          modified = true;
-        } else {
-          // Ensure we do not overwrite any user-uploaded Base64 welcome image or custom web URL
-          const isCustomWelcomeImage = parsed.welcomeBanner.image?.startsWith('data:image/') || parsed.welcomeBanner.image?.startsWith('http');
-          if (!isCustomWelcomeImage && (
-            parsed.welcomeBanner.image.includes('unsplash.com') ||
-            parsed.welcomeBanner.image.includes('photo-1522337360788-8b13dee7a37e') ||
-            parsed.welcomeBanner.image.includes('regenerated_image_1780817423496') ||
-            !parsed.welcomeBanner.image.startsWith('/src/assets/images/regenerated_image')
+          // Sync or override older default placeholder image if present
+          const isCustomFounderPhoto = parsed.founder?.photo?.startsWith('data:image/') || parsed.founder?.photo?.startsWith('http');
+          if (parsed.founder && !isCustomFounderPhoto && (
+            parsed.founder.photo.includes('unsplash.com/photo-1573496359142') || 
+            parsed.founder.photo.includes('real_owner_photo_1780806708774.png') || 
+            parsed.founder.photo.includes('regenerated_image_1780807060954.jpg') ||
+            !parsed.founder.photo.startsWith('/src/assets/')
           )) {
-            parsed.welcomeBanner.image = DEFAULT_SITE_CONFIG.welcomeBanner.image;
+            parsed.founder.photo = DEFAULT_SITE_CONFIG.founder.photo;
             modified = true;
           }
-        }
-        if (!parsed.shopBanner) {
-          parsed.shopBanner = DEFAULT_SITE_CONFIG.shopBanner;
-          modified = true;
-        }
-        if (!parsed.aboutSection) {
-          parsed.aboutSection = DEFAULT_SITE_CONFIG.aboutSection;
-          modified = true;
-        }
-        if (!parsed.whyChooseSection) {
-          parsed.whyChooseSection = DEFAULT_SITE_CONFIG.whyChooseSection;
-          modified = true;
-        }
-        if (!parsed.quickStatsRibbon) {
-          parsed.quickStatsRibbon = DEFAULT_SITE_CONFIG.quickStatsRibbon;
-          modified = true;
-        }
-        if (!parsed.footerContent) {
-          parsed.footerContent = DEFAULT_SITE_CONFIG.footerContent;
-          modified = true;
-        }
-        if (!parsed.theme) {
-          parsed.theme = DEFAULT_SITE_CONFIG.theme;
-          modified = true;
-        }
-        if (!parsed.sections) {
-          parsed.sections = DEFAULT_SITE_CONFIG.sections;
-          modified = true;
-        }
-        if (!parsed.menuItems) {
-          parsed.menuItems = DEFAULT_SITE_CONFIG.menuItems;
-          modified = true;
-        }
+          // Sync or override older default founder name if present
+          if (parsed.founder && parsed.founder.name === 'Anika Singh') {
+            parsed.founder.name = DEFAULT_SITE_CONFIG.founder.name;
+            modified = true;
+          }
+          // Add missing banner configs if they aren't in database
+          if (!parsed.promoBanner) {
+            parsed.promoBanner = DEFAULT_SITE_CONFIG.promoBanner;
+            modified = true;
+          }
+          if (!parsed.welcomeBanner) {
+            parsed.welcomeBanner = DEFAULT_SITE_CONFIG.welcomeBanner;
+            modified = true;
+          } else {
+            // Ensure we do not overwrite any user-uploaded Base64 welcome image or custom web URL
+            const isCustomWelcomeImage = parsed.welcomeBanner.image?.startsWith('data:image/') || parsed.welcomeBanner.image?.startsWith('http');
+            if (!isCustomWelcomeImage && (
+              parsed.welcomeBanner.image.includes('unsplash.com') ||
+              parsed.welcomeBanner.image.includes('photo-1522337360788-8b13dee7a37e') ||
+              parsed.welcomeBanner.image.includes('regenerated_image_1780817423496') ||
+              !parsed.welcomeBanner.image.startsWith('/src/assets/images/regenerated_image')
+            )) {
+              parsed.welcomeBanner.image = DEFAULT_SITE_CONFIG.welcomeBanner.image;
+              modified = true;
+            }
+          }
+          if (!parsed.shopBanner) {
+            parsed.shopBanner = DEFAULT_SITE_CONFIG.shopBanner;
+            modified = true;
+          }
+          if (!parsed.aboutSection) {
+            parsed.aboutSection = DEFAULT_SITE_CONFIG.aboutSection;
+            modified = true;
+          }
+          if (!parsed.whyChooseSection) {
+            parsed.whyChooseSection = DEFAULT_SITE_CONFIG.whyChooseSection;
+            modified = true;
+          }
+          if (!parsed.quickStatsRibbon) {
+            parsed.quickStatsRibbon = DEFAULT_SITE_CONFIG.quickStatsRibbon;
+            modified = true;
+          }
+          if (!parsed.footerContent) {
+            parsed.footerContent = DEFAULT_SITE_CONFIG.footerContent;
+            modified = true;
+          }
+          if (!parsed.theme) {
+            parsed.theme = DEFAULT_SITE_CONFIG.theme;
+            modified = true;
+          }
+          if (!parsed.sections) {
+            parsed.sections = DEFAULT_SITE_CONFIG.sections;
+            modified = true;
+          }
+          if (!parsed.menuItems) {
+            parsed.menuItems = DEFAULT_SITE_CONFIG.menuItems;
+            modified = true;
+          }
 
-        if (modified) {
-          localStorage.setItem('site_config_anika', JSON.stringify(parsed));
+          if (modified) {
+            await saveSiteConfigToDb(parsed);
+          }
+          setConfig(parsed);
+        } else {
+          await saveSiteConfigToDb(DEFAULT_SITE_CONFIG);
+          setConfig(DEFAULT_SITE_CONFIG);
         }
-        setConfig(parsed);
       } catch (err) {
-        console.error('Failed to parse cached configuration, falling back to default.', err);
+        console.error('Failed to parse database configuration, falling back to default.', err);
+        setConfig(DEFAULT_SITE_CONFIG);
+      } finally {
+        setDbLoading(false);
       }
-    } else {
-      localStorage.setItem('site_config_anika', JSON.stringify(DEFAULT_SITE_CONFIG));
     }
+
+    initDbConfig();
 
     // Hash sync on load
     const hash = window.location.hash.replace('#', '');
@@ -128,14 +139,22 @@ export default function App() {
     }
   }, []);
 
-  const handleConfigSave = (newConfig: SiteConfig) => {
+  const handleConfigSave = async (newConfig: SiteConfig) => {
     setConfig(newConfig);
-    localStorage.setItem('site_config_anika', JSON.stringify(newConfig));
+    try {
+      await saveSiteConfigToDb(newConfig);
+    } catch (err) {
+      console.error('Failed to save configuration to cloud database:', err);
+    }
   };
 
-  const handleConfigReset = () => {
+  const handleConfigReset = async () => {
     setConfig(DEFAULT_SITE_CONFIG);
-    localStorage.removeItem('site_config_anika');
+    try {
+      await saveSiteConfigToDb(DEFAULT_SITE_CONFIG);
+    } catch (err) {
+      console.error('Failed to reset configuration in cloud database:', err);
+    }
   };
 
   // 2. Automated Banner Sizing
@@ -941,6 +960,24 @@ export default function App() {
         return null;
     }
   };
+
+  if (dbLoading) {
+    return (
+      <div className="bg-[#0A0A0A] text-white min-h-screen flex flex-col items-center justify-center font-sans">
+        <div className="text-center space-y-6">
+          <div className="w-14 h-14 border-2 border-[#D4AF37] border-t-transparent rounded-full animate-spin mx-auto" />
+          <div className="space-y-2 animate-pulse">
+            <h1 className="font-serif text-xl font-bold tracking-widest text-[#D4AF37]">
+              ANIKA MAKEOVER SALON
+            </h1>
+            <p className="text-xs text-neutral-400 font-mono tracking-widest uppercase">
+              Loading Luxury Database...
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-luxury-bg text-luxury-text min-h-screen relative font-sans overflow-x-hidden w-full">

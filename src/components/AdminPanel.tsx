@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Lock, Settings, Save, RotateCcw, X, Edit3, Trash2, Plus, Check, MapPin, Phone, MessageSquare, Instagram, FileText, Upload, Percent, Sparkles, Eye, EyeOff, ArrowUp, ArrowDown, Award, ShieldCheck, Heart } from 'lucide-react';
 import { SiteConfig, ServiceItem, GalleryItem, Testimonial, VideoTestimonial } from '../types';
+import { uploadImageToStorage } from '../firebase';
 
 interface AdminPanelProps {
   currentConfig: SiteConfig;
@@ -73,18 +74,18 @@ export default function AdminPanel({ currentConfig, onSave, onReset, isOpen, onC
     });
   };
 
-  const handlePhotoUpload = (file: File) => {
+  const handlePhotoUpload = async (file: File) => {
     if (!file.type.startsWith('image/')) {
       alert('Please select an image file (PNG, JPG, JPEG, etc.).');
       return;
     }
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      if (e.target?.result && typeof e.target.result === 'string') {
-        updateFounder('photo', e.target.result);
-      }
-    };
-    reader.readAsDataURL(file);
+    try {
+      const url = await uploadImageToStorage(file, 'founder');
+      updateFounder('photo', url);
+    } catch (error) {
+      console.error(error);
+      alert('Failed to upload founder photo to Firebase storage.');
+    }
   };
 
   const updatePromoBanner = (key: string, value: any) => {
@@ -149,60 +150,60 @@ export default function AdminPanel({ currentConfig, onSave, onReset, isOpen, onC
     });
   };
 
-  const handleBannerSlideUpload = (id: string, file: File) => {
+  const handleBannerSlideUpload = async (id: string, file: File) => {
     if (!file.type.startsWith('image/')) {
       alert('Please select an image file (PNG, JPG, JPEG, etc.).');
       return;
     }
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      if (e.target?.result && typeof e.target.result === 'string') {
-        updateBannerSlide(id, 'image', e.target.result);
-      }
-    };
-    reader.readAsDataURL(file);
+    try {
+      const url = await uploadImageToStorage(file, 'banners');
+      updateBannerSlide(id, 'image', url);
+    } catch (error) {
+      console.error(error);
+      alert('Failed to upload banner image to Firebase storage.');
+    }
   };
 
-  const handlePromoBannerUpload = (file: File) => {
+  const handlePromoBannerUpload = async (file: File) => {
     if (!file.type.startsWith('image/')) {
       alert('Please select an image file (PNG, JPG, JPEG, etc.).');
       return;
     }
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      if (e.target?.result && typeof e.target.result === 'string') {
-        updatePromoBanner('image', e.target.result);
-      }
-    };
-    reader.readAsDataURL(file);
+    try {
+      const url = await uploadImageToStorage(file, 'promos');
+      updatePromoBanner('image', url);
+    } catch (error) {
+      console.error(error);
+      alert('Failed to upload promo banner image to Firebase storage.');
+    }
   };
 
-  const handleWelcomeBannerUpload = (file: File) => {
+  const handleWelcomeBannerUpload = async (file: File) => {
     if (!file.type.startsWith('image/')) {
       alert('Please select an image file (PNG, JPG, JPEG, etc.).');
       return;
     }
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      if (e.target?.result && typeof e.target.result === 'string') {
-        updateWelcomeBanner('image', e.target.result);
-      }
-    };
-    reader.readAsDataURL(file);
+    try {
+      const url = await uploadImageToStorage(file, 'welcome');
+      updateWelcomeBanner('image', url);
+    } catch (error) {
+      console.error(error);
+      alert('Failed to upload welcome banner image to Firebase storage.');
+    }
   };
 
-  const handleShopBannerUpload = (file: File) => {
+  const handleShopBannerUpload = async (file: File) => {
     if (!file.type.startsWith('image/')) {
       alert('Please select an image file (PNG, JPG, JPEG, etc.).');
       return;
     }
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      if (e.target?.result && typeof e.target.result === 'string') {
-        updateShopBanner('image', e.target.result);
-      }
-    };
-    reader.readAsDataURL(file);
+    try {
+      const url = await uploadImageToStorage(file, 'shop');
+      updateShopBanner('image', url);
+    } catch (error) {
+      console.error(error);
+      alert('Failed to upload flagship banner image to Firebase storage.');
+    }
   };
 
   // Service Edit helper
@@ -316,32 +317,32 @@ export default function AdminPanel({ currentConfig, onSave, onReset, isOpen, onC
     });
   };
 
-  const handleGalleryItemUpload = (id: string, file: File) => {
+  const handleGalleryItemUpload = async (id: string, file: File) => {
     if (!file.type.startsWith('image/')) {
       alert('Please select an image file (PNG, JPG, JPEG, etc.).');
       return;
     }
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      if (e.target?.result && typeof e.target.result === 'string') {
-        updateGalleryItem(id, { image: e.target.result });
-      }
-    };
-    reader.readAsDataURL(file);
+    try {
+      const url = await uploadImageToStorage(file, 'gallery');
+      updateGalleryItem(id, { image: url });
+    } catch (error) {
+      console.error(error);
+      alert('Failed to upload gallery image to Firebase storage.');
+    }
   };
 
-  const handleTestimonialUpload = (id: string, file: File) => {
+  const handleTestimonialUpload = async (id: string, file: File) => {
     if (!file.type.startsWith('image/')) {
       alert('Please select an image file (PNG, JPG, JPEG, etc.).');
       return;
     }
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      if (e.target?.result && typeof e.target.result === 'string') {
-        updateTestimonial(id, { photo: e.target.result });
-      }
-    };
-    reader.readAsDataURL(file);
+    try {
+      const url = await uploadImageToStorage(file, 'testimonials');
+      updateTestimonial(id, { photo: url });
+    } catch (error) {
+      console.error(error);
+      alert('Failed to upload testimonial photo to Firebase storage.');
+    }
   };
 
   const updateAboutSection = (key: string, value: any) => {
@@ -370,18 +371,18 @@ export default function AdminPanel({ currentConfig, onSave, onReset, isOpen, onC
     });
   };
 
-  const handleAboutSectionUpload = (file: File) => {
+  const handleAboutSectionUpload = async (file: File) => {
     if (!file.type.startsWith('image/')) {
       alert('Please select an image file (PNG, JPG, JPEG, etc.).');
       return;
     }
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      if (e.target?.result && typeof e.target.result === 'string') {
-        updateAboutSection('image', e.target.result);
-      }
-    };
-    reader.readAsDataURL(file);
+    try {
+      const url = await uploadImageToStorage(file, 'about');
+      updateAboutSection('image', url);
+    } catch (error) {
+      console.error(error);
+      alert('Failed to upload about section image to Firebase storage.');
+    }
   };
 
   const updateWhyChooseSection = (key: string, value: any) => {
@@ -550,18 +551,18 @@ export default function AdminPanel({ currentConfig, onSave, onReset, isOpen, onC
     });
   };
 
-  const handleVideoThumbnailUpload = (id: string, file: File) => {
+  const handleVideoThumbnailUpload = async (id: string, file: File) => {
     if (!file.type.startsWith('image/')) {
       alert('Please select an image file (PNG, JPG, JPEG, etc.).');
       return;
     }
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      if (e.target?.result && typeof e.target.result === 'string') {
-        updateVideoTestimonial(id, { thumbnail: e.target.result });
-      }
-    };
-    reader.readAsDataURL(file);
+    try {
+      const url = await uploadImageToStorage(file, 'videos');
+      updateVideoTestimonial(id, { thumbnail: url });
+    } catch (error) {
+      console.error(error);
+      alert('Failed to upload video thumbnail image to Firebase storage.');
+    }
   };
 
   return (

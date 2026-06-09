@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Calendar, Clock, User, Phone, MessageSquare, Sparkles } from 'lucide-react';
+import { Calendar, Clock, User, Phone, MessageSquare, Sparkles, CheckCircle2 } from 'lucide-react';
 import { ServiceCategory } from '../types';
+import { addAppointmentToDb } from '../firebase';
 
 interface BookingFormProps {
   services: ServiceCategory[];
@@ -20,6 +21,8 @@ export default function BookingForm({ services, preSelectedService = '', onSucce
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [successId, setSuccessId] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   // Flatten services list for selection
   const flatServices = services.flatMap(category => 
@@ -45,16 +48,33 @@ export default function BookingForm({ services, preSelectedService = '', onSucce
     return Object.keys(tempErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
 
     setIsSubmitting(true);
+    setErrorMsg(null);
 
-    // Context format matching customer's prompt
-    const messageText = `Hello Anika Makeover Salon,
+    try {
+      // 1. Real database write to appointments collection
+      const newApptId = await addAppointmentToDb({
+        name: formData.name.trim(),
+        phone: formData.mobile.trim(),
+        service: formData.service,
+        date: formData.date,
+        time: formData.time,
+        notes: formData.message.trim(),
+        timestamp: new Date().toISOString(),
+        status: 'pending'
+      });
 
-Appointment Request
+      // Set successful state only after confirm write completes
+      setSuccessId(newApptId);
+
+      // 2. Format Whatsapp message
+      const messageText = `Hello Anika Makeover Salon,
+
+Appointment Request (ID: ${newApptId})
 
 Name: ${formData.name.trim()}
 Mobile Number: ${formData.mobile.trim()}
@@ -67,18 +87,96 @@ Please confirm my appointment.
 
 Thank You.`;
 
-    // Encode the query parameters
-    const encodedMessage = encodeURIComponent(messageText);
-    const whatsappUrl = `https://wa.me/918922933940?text=${encodedMessage}`;
+      const encodedMessage = encodeURIComponent(messageText);
+      const whatsappUrl = `https://wa.me/918922933940?text=${encodedMessage}`;
 
-    // Open WhatsApp
-    window.open(whatsappUrl, '_blank', 'noreferrerPolicy=no-referrer');
-    
-    setIsSubmitting(false);
-    if (onSuccess) {
-      onSuccess();
+      // Open WhatsApp for instant salon notification integration
+      window.open(whatsappUrl, '_blank', 'noreferrerPolicy=no-referrer');
+
+      if (onSuccess) {
+        onSuccess();
+      }
+    } catch (err) {
+      console.error('Error reserving appointment:', err);
+      setErrorMsg('Failed to save reservation to cloud. Please review fields and retry.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
+
+  if (successId) {
+    return (
+      <div id="booking-success-receipt" className="glass-premium p-6 sm:p-8 rounded-3xl shadow-2xl relative overflow-hidden max-w-xl mx-auto border border-emerald-500/30 text-center animate-fade-in font-sans">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-2xl -mr-16 -mt-16" />
+        <div className="absolute bottom-0 left-0 w-32 h-32 bg-primary-gold/5 rounded-full blur-2xl -ml-16 -mb-16" />
+        
+        <div className="relative py-6 flex flex-col items-center">
+          <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-600 rounded-full w-20 h-20 mb-4 flex items-center justify-center shadow-lg">
+            <CheckCircle2 size={44} className="animate-bounce-slow" />
+          </div>
+          
+          <span className="font-sub-luxury text-emerald-600 font-semibold tracking-wider text-xs uppercase mb-1">Reservation Confirmed</span>
+          <h3 className="font-serif-luxury text-2xl text-luxury-text font-bold mb-2">Thank You, {formData.name}!</h3>
+          
+          <div className="w-full bg-white/60 border border-neutral-100 rounded-2xl p-4 my-4 text-left text-xs space-y-2 font-sans relative">
+            <div className="flex justify-between border-b border-neutral-100 pb-2 mb-2 font-semibold">
+              <span className="text-gray-400">FIRESTORE RECORD ID</span>
+              <span className="text-emerald-700 font-mono select-all bg-emerald-50 px-1.5 py-0.5 rounded font-bold">{successId}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-400">Chosen Service:</span>
+              <span className="text-luxury-text font-semibold">{formData.service}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-400">Reserved Date:</span>
+              <span className="text-luxury-text font-semibold">{formData.date}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-400">Convenient Slot:</span>
+              <span className="text-luxury-text font-semibold">{formData.time}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-400">Status:</span>
+              <span className="bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider">Pending Confirmation</span>
+            </div>
+          </div>
+
+          <p className="text-xs text-gray-500 max-w-sm mb-6 leading-relaxed">
+            Your booking details are successfully saved into our cloud database. Make sure to present your Booking ID on date of arrival.
+          </p>
+
+          <div className="flex flex-col sm:flex-row gap-3 w-full justify-center">
+            <a
+              href={`https://wa.me/918922933940?text=${encodeURIComponent(`Hello, I booked an appointment. My Booking ID is ${successId}.`)}`}
+              target="_blank"
+              rel="noreferrer"
+              className="py-3 px-6 bg-gradient-to-r from-emerald-500 to-[#a15a64] text-white font-btn font-bold uppercase tracking-wider rounded-xl text-xs transition-transform hover:scale-[1.01] flex items-center justify-center space-x-2 shadow cursor-pointer text-center"
+            >
+              <MessageSquare size={14} />
+              <span>Message Salon</span>
+            </a>
+            <button
+              type="button"
+              onClick={() => {
+                setSuccessId(null);
+                setFormData({
+                  name: '',
+                  mobile: '',
+                  service: preSelectedService || '',
+                  date: '',
+                  time: '',
+                  message: ''
+                });
+              }}
+              className="py-3 px-5 border border-primary-gold/30 text-primary-gold hover:bg-primary-gold/5 font-btn font-bold uppercase tracking-wider rounded-xl text-xs cursor-pointer"
+            >
+              Book Another
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div id="booking-form-card" className="glass-premium p-6 sm:p-8 rounded-3xl shadow-2xl relative overflow-hidden max-w-xl mx-auto border border-primary-gold/20">

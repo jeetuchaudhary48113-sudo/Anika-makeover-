@@ -1,26 +1,128 @@
 {
   "entities": {
-    "SiteConfig": {
-      "title": "SiteConfig",
-      "description": "Global website configuration, styling structure, images, videos, and services",
+    "Appointment": {
+      "title": "Appointment",
+      "description": "Customer reservations details",
       "type": "object",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Identifier for the document"
-        },
-        "config": {
-          "type": "string",
-          "description": "JSON string representations of the full SiteConfig configuration"
-        }
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "phone": { "type": "string" },
+        "service": { "type": "string" },
+        "date": { "type": "string" },
+        "time": { "type": "string" },
+        "notes": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "confirmed", "completed", "cancelled"] }
+      },
+      "required": ["name", "phone", "service", "date", "time", "timestamp"]
+    },
+    "ServiceCategory": {
+      "title": "ServiceCategory",
+      "description": "Category of salon services containing item lists",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "category": { "type": "string" },
+        "services": { "type": "array" }
+      },
+      "required": ["category", "services"]
+    },
+    "GalleryItem": {
+      "title": "GalleryItem",
+      "description": "Grooming and makeover transformation photos",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "image": { "type": "string" },
+        "title": { "type": "string" },
+        "category": { "type": "string" }
+      },
+      "required": ["image", "title", "category"]
+    },
+    "Review": {
+      "title": "Review",
+      "description": "Verified client testimonials and star ratings",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "role": { "type": "string" },
+        "photo": { "type": "string" },
+        "rating": { "type": "number" },
+        "text": { "type": "string" }
+      },
+      "required": ["name", "rating", "text"]
+    },
+    "Banner": {
+      "title": "Banner",
+      "description": "Banner and slideshow slider graphics",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "image": { "type": "string" },
+        "title": { "type": "string" },
+        "subtitle": { "type": "string" },
+        "badge": { "type": "string" },
+        "type": { "type": "string" }
+      },
+      "required": ["image", "title"]
+    },
+    "Owner": {
+      "title": "Owner",
+      "description": "Founder credentials, quote text, and career stats",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "photo": { "type": "string" },
+        "designation": { "type": "string" },
+        "message": { "type": "string" },
+        "experienceYears": { "type": "number" },
+        "happyClientsCount": { "type": "number" },
+        "makeoversCount": { "type": "number" }
+      },
+      "required": ["name", "photo", "message"]
+    },
+    "Setting": {
+      "title": "Setting",
+      "description": "Global website style variables and active menu layout configurations",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "config": { "type": "object" },
+        "updatedAt": { "type": "string" }
       },
       "required": ["id", "config"]
     }
   },
   "firestore": {
-    "/site_config/{id}": {
-      "schema": "SiteConfig",
-      "description": "Collection for housing global website configuration documents"
+    "/appointments/{id}": {
+      "schema": "Appointment",
+      "description": "Submitted appointment booking requests"
+    },
+    "/services/{id}": {
+      "schema": "ServiceCategory",
+      "description": "Editable menu lists of services offered by the salon"
+    },
+    "/gallery/{id}": {
+      "schema": "GalleryItem",
+      "description": "Lookbook graphics of styles, wedding bride visuals, and hair styling transformations"
+    },
+    "/reviews/{id}": {
+      "schema": "Review",
+      "description": "Authentic testimonial cards written by verified clients"
+    },
+    "/banners/{id}": {
+      "schema": "Banner",
+      "description": "Promo sliders, hero panels, and home slideshow header graphics"
+    },
+    "/owner/{id}": {
+      "schema": "Owner",
+      "description": "Owner experience data, messages, and contact numbers"
+    },
+    "/settings/{id}": {
+      "schema": "Setting",
+      "description": "Global business configurations and template state adjustments"
     }
   }
 }

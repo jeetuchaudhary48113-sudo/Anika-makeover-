@@ -1,7 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { Lock, Settings, Save, RotateCcw, X, Edit3, Trash2, Plus, Check, MapPin, Phone, MessageSquare, Instagram, FileText, Upload, Percent, Sparkles, Eye, EyeOff, ArrowUp, ArrowDown, Award, ShieldCheck, Heart } from 'lucide-react';
 import { SiteConfig, ServiceItem, GalleryItem, Testimonial, VideoTestimonial } from '../types';
-import { uploadImageToStorage, isFirebasePlaceholder } from '../firebase';
+import { 
+  uploadImageToStorage, 
+  isFirebasePlaceholder, 
+  uploadVideoToStorage, 
+  loadAppointmentsFromDb, 
+  updateAppointmentStatusInDb, 
+  deleteAppointmentFromDb 
+} from '../firebase';
+import ImageCropperModal from './ImageCropperModal';
 
 interface AdminPanelProps {
   currentConfig: SiteConfig;
@@ -12,11 +20,39 @@ interface AdminPanelProps {
 }
 
 export default function AdminPanel({ currentConfig, onSave, onReset, isOpen, onClose }: AdminPanelProps) {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return localStorage.getItem('is_admin_logged_in') === 'true';
+  });
   const [passcode, setPasscode] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
-  const [activeTab, setActiveTab] = useState<string>('contact');
+  const [activeTab, setActiveTab] = useState<string>('appointments');
   const [isDragOver, setIsDragOver] = useState(false);
+
+  // Crop & Resize Interceptor State
+  const [pendingCropFile, setPendingCropFile] = useState<File | null>(null);
+  const [onCropConfirmCallback, setOnCropConfirmCallback] = useState<((file: File) => void) | null>(null);
+
+  // Appointments list tracking
+  const [appointmentsList, setAppointmentsList] = useState<any[]>([]);
+  const [isAppointmentsLoading, setIsAppointmentsLoading] = useState(false);
+  const [appointmentSearchQuery, setAppointmentSearchQuery] = useState('');
+
+  const startImageCropProcess = (file: File, callback: (editedFile: File) => void) => {
+    setPendingCropFile(file);
+    setOnCropConfirmCallback(() => callback);
+  };
+
+  const refreshAppointments = async () => {
+    setIsAppointmentsLoading(true);
+    try {
+      const data = await loadAppointmentsFromDb();
+      setAppointmentsList(data || []);
+    } catch (err) {
+      console.error('Failed to resolve appointments from database:', err);
+    } finally {
+      setIsAppointmentsLoading(false);
+    }
+  };
 
   // Working state copy of the configuration
   const [config, setConfig] = useState<SiteConfig>({ ...currentConfig });
@@ -26,21 +62,48 @@ export default function AdminPanel({ currentConfig, onSave, onReset, isOpen, onC
     setConfig({ ...currentConfig });
   }, [currentConfig, isOpen]);
 
+  // Load appointments whenever admin switches to appointments tab
+  useEffect(() => {
+    if (isOpen && isAuthenticated && activeTab === 'appointments') {
+      refreshAppointments();
+    }
+  }, [isOpen, isAuthenticated, activeTab]);
+
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     if (passcode === 'anika123' || passcode === 'admin') {
       setIsAuthenticated(true);
       setErrorMsg('');
+      localStorage.setItem('is_admin_logged_in', 'true');
     } else {
       setErrorMsg('Incorrect Passcode. Access restricted.');
     }
   };
 
-  const handleSaveAll = () => {
-    onSave(config);
-    onClose();
-    // Display sweet browser alert confirmation
-    alert('✨ Anika Makeover Salon website configuration updated successfully of all live features!');
+  // Saving Feedback States
+  const [isSaving, setIsSaving] = useState(false);
+  const [showSaveSuccess, setShowSaveSuccess] = useState(false);
+
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    localStorage.removeItem('is_admin_logged_in');
+  };
+
+  const handleSaveAll = async () => {
+    setIsSaving(true);
+    try {
+      await onSave(config);
+      setIsSaving(false);
+      setShowSaveSuccess(true);
+      // Let the administrator visually absorb the success feedback for 1.8 seconds before close
+      await new Promise(resolve => setTimeout(resolve, 1800));
+      setShowSaveSuccess(false);
+      onClose();
+    } catch (e) {
+      console.error(e);
+      setIsSaving(false);
+      alert('Failed to sync changes with Firestore.');
+    }
   };
 
   const handleResetDefaults = () => {
@@ -74,18 +137,20 @@ export default function AdminPanel({ currentConfig, onSave, onReset, isOpen, onC
     });
   };
 
-  const handlePhotoUpload = async (file: File) => {
+  const handlePhotoUpload = (file: File) => {
     if (!file.type.startsWith('image/')) {
       alert('Please select an image file (PNG, JPG, JPEG, etc.).');
       return;
     }
-    try {
-      const url = await uploadImageToStorage(file, 'founder');
-      updateFounder('photo', url);
-    } catch (error) {
-      console.error(error);
-      alert('Failed to upload founder photo to Firebase storage.');
-    }
+    startImageCropProcess(file, async (croppedFile) => {
+      try {
+        const url = await uploadImageToStorage(croppedFile, 'founder');
+        updateFounder('photo', url);
+      } catch (error) {
+        console.error(error);
+        alert('Failed to upload founder photo to Firebase storage.');
+      }
+    });
   };
 
   const updatePromoBanner = (key: string, value: any) => {
@@ -150,60 +215,68 @@ export default function AdminPanel({ currentConfig, onSave, onReset, isOpen, onC
     });
   };
 
-  const handleBannerSlideUpload = async (id: string, file: File) => {
+  const handleBannerSlideUpload = (id: string, file: File) => {
     if (!file.type.startsWith('image/')) {
       alert('Please select an image file (PNG, JPG, JPEG, etc.).');
       return;
     }
-    try {
-      const url = await uploadImageToStorage(file, 'banners');
-      updateBannerSlide(id, 'image', url);
-    } catch (error) {
-      console.error(error);
-      alert('Failed to upload banner image to Firebase storage.');
-    }
+    startImageCropProcess(file, async (croppedFile) => {
+      try {
+        const url = await uploadImageToStorage(croppedFile, 'banners');
+        updateBannerSlide(id, 'image', url);
+      } catch (error) {
+        console.error(error);
+        alert('Failed to upload banner image to Firebase storage.');
+      }
+    });
   };
 
-  const handlePromoBannerUpload = async (file: File) => {
+  const handlePromoBannerUpload = (file: File) => {
     if (!file.type.startsWith('image/')) {
       alert('Please select an image file (PNG, JPG, JPEG, etc.).');
       return;
     }
-    try {
-      const url = await uploadImageToStorage(file, 'promos');
-      updatePromoBanner('image', url);
-    } catch (error) {
-      console.error(error);
-      alert('Failed to upload promo banner image to Firebase storage.');
-    }
+    startImageCropProcess(file, async (croppedFile) => {
+      try {
+        const url = await uploadImageToStorage(croppedFile, 'promos');
+        updatePromoBanner('image', url);
+      } catch (error) {
+        console.error(error);
+        alert('Failed to upload promo banner image to Firebase storage.');
+      }
+    });
   };
 
-  const handleWelcomeBannerUpload = async (file: File) => {
+  const handleWelcomeBannerUpload = (file: File) => {
     if (!file.type.startsWith('image/')) {
       alert('Please select an image file (PNG, JPG, JPEG, etc.).');
       return;
     }
-    try {
-      const url = await uploadImageToStorage(file, 'welcome');
-      updateWelcomeBanner('image', url);
-    } catch (error) {
-      console.error(error);
-      alert('Failed to upload welcome banner image to Firebase storage.');
-    }
+    startImageCropProcess(file, async (croppedFile) => {
+      try {
+        const url = await uploadImageToStorage(croppedFile, 'welcome');
+        updateWelcomeBanner('image', url);
+      } catch (error) {
+        console.error(error);
+        alert('Failed to upload welcome banner image to Firebase storage.');
+      }
+    });
   };
 
-  const handleShopBannerUpload = async (file: File) => {
+  const handleShopBannerUpload = (file: File) => {
     if (!file.type.startsWith('image/')) {
       alert('Please select an image file (PNG, JPG, JPEG, etc.).');
       return;
     }
-    try {
-      const url = await uploadImageToStorage(file, 'shop');
-      updateShopBanner('image', url);
-    } catch (error) {
-      console.error(error);
-      alert('Failed to upload flagship banner image to Firebase storage.');
-    }
+    startImageCropProcess(file, async (croppedFile) => {
+      try {
+        const url = await uploadImageToStorage(croppedFile, 'shop');
+        updateShopBanner('image', url);
+      } catch (error) {
+        console.error(error);
+        alert('Failed to upload flagship banner image to Firebase storage.');
+      }
+    });
   };
 
   // Service Edit helper
@@ -317,32 +390,36 @@ export default function AdminPanel({ currentConfig, onSave, onReset, isOpen, onC
     });
   };
 
-  const handleGalleryItemUpload = async (id: string, file: File) => {
+  const handleGalleryItemUpload = (id: string, file: File) => {
     if (!file.type.startsWith('image/')) {
       alert('Please select an image file (PNG, JPG, JPEG, etc.).');
       return;
     }
-    try {
-      const url = await uploadImageToStorage(file, 'gallery');
-      updateGalleryItem(id, { image: url });
-    } catch (error) {
-      console.error(error);
-      alert('Failed to upload gallery image to Firebase storage.');
-    }
+    startImageCropProcess(file, async (croppedFile) => {
+      try {
+        const url = await uploadImageToStorage(croppedFile, 'gallery');
+        updateGalleryItem(id, { image: url });
+      } catch (error) {
+        console.error(error);
+        alert('Failed to upload gallery image to Firebase storage.');
+      }
+    });
   };
 
-  const handleTestimonialUpload = async (id: string, file: File) => {
+  const handleTestimonialUpload = (id: string, file: File) => {
     if (!file.type.startsWith('image/')) {
       alert('Please select an image file (PNG, JPG, JPEG, etc.).');
       return;
     }
-    try {
-      const url = await uploadImageToStorage(file, 'testimonials');
-      updateTestimonial(id, { photo: url });
-    } catch (error) {
-      console.error(error);
-      alert('Failed to upload testimonial photo to Firebase storage.');
-    }
+    startImageCropProcess(file, async (croppedFile) => {
+      try {
+        const url = await uploadImageToStorage(croppedFile, 'testimonials');
+        updateTestimonial(id, { photo: url });
+      } catch (error) {
+        console.error(error);
+        alert('Failed to upload testimonial photo to Firebase storage.');
+      }
+    });
   };
 
   const updateAboutSection = (key: string, value: any) => {
@@ -371,18 +448,20 @@ export default function AdminPanel({ currentConfig, onSave, onReset, isOpen, onC
     });
   };
 
-  const handleAboutSectionUpload = async (file: File) => {
+  const handleAboutSectionUpload = (file: File) => {
     if (!file.type.startsWith('image/')) {
       alert('Please select an image file (PNG, JPG, JPEG, etc.).');
       return;
     }
-    try {
-      const url = await uploadImageToStorage(file, 'about');
-      updateAboutSection('image', url);
-    } catch (error) {
-      console.error(error);
-      alert('Failed to upload about section image to Firebase storage.');
-    }
+    startImageCropProcess(file, async (croppedFile) => {
+      try {
+        const url = await uploadImageToStorage(croppedFile, 'about');
+        updateAboutSection('image', url);
+      } catch (error) {
+        console.error(error);
+        alert('Failed to upload about section image to Firebase storage.');
+      }
+    });
   };
 
   const updateWhyChooseSection = (key: string, value: any) => {
@@ -551,17 +630,36 @@ export default function AdminPanel({ currentConfig, onSave, onReset, isOpen, onC
     });
   };
 
-  const handleVideoThumbnailUpload = async (id: string, file: File) => {
+  const handleVideoThumbnailUpload = (id: string, file: File) => {
     if (!file.type.startsWith('image/')) {
       alert('Please select an image file (PNG, JPG, JPEG, etc.).');
       return;
     }
+    startImageCropProcess(file, async (croppedFile) => {
+      try {
+        const url = await uploadImageToStorage(croppedFile, 'videos');
+        updateVideoTestimonial(id, { thumbnail: url });
+      } catch (error) {
+        console.error(error);
+        alert('Failed to upload video thumbnail image to Firebase storage.');
+      }
+    });
+  };
+
+  const handleDirectVideoUpload = async (id: string, file: File) => {
+    if (!file.type.startsWith('video/')) {
+      alert('Please select a valid video file (MP4, WEBM, etc.).');
+      return;
+    }
     try {
-      const url = await uploadImageToStorage(file, 'videos');
-      updateVideoTestimonial(id, { thumbnail: url });
+      updateVideoTestimonial(id, { videoUrl: 'Uploading direct video file... please wait.' });
+      const url = await uploadVideoToStorage(file);
+      updateVideoTestimonial(id, { videoUrl: url });
+      alert('Direct video uploaded to Firebase Storage and updated successfully!');
     } catch (error) {
       console.error(error);
-      alert('Failed to upload video thumbnail image to Firebase storage.');
+      alert('Failed to upload video file to storage.');
+      updateVideoTestimonial(id, { videoUrl: '' });
     }
   };
 
@@ -627,6 +725,7 @@ export default function AdminPanel({ currentConfig, onSave, onReset, isOpen, onC
                 {/* Content Tabs Navigation */}
                 <div className="flex border-b border-primary-gold/10 bg-white shadow-sm shrink-0 overflow-x-auto text-[10px] font-btn">
                   {[
+                    { id: 'appointments', name: 'Bookings 📅' },
                     { id: 'contact', name: 'Contact' },
                     { id: 'services', name: 'Services' },
                     { id: 'founder', name: 'Founder' },
@@ -657,27 +756,247 @@ export default function AdminPanel({ currentConfig, onSave, onReset, isOpen, onC
 
                 {/* Main Form Fields Edit Area */}
                 <div className="flex-1 overflow-y-auto p-6 space-y-6">
-                  
-                  {isFirebasePlaceholder && (
-                    <div id="firebase-status-banner" className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-xs text-amber-800 space-y-2 animate-fade-in font-sans">
-                      <div className="flex items-center gap-2 font-bold select-none">
-                        <span className="p-1.5 bg-amber-200 text-amber-900 rounded-lg">⚙️</span>
-                        <span>Complete Your Cloud Configuration</span>
+
+                  {/* TAB: APPOINTMENTS */}
+                  {activeTab === 'appointments' && (
+                    <div id="admin-appointments-panel" className="space-y-4 animate-fade-in">
+                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-4 rounded-2xl border border-primary-gold/10 shadow-sm gap-4">
+                        <div>
+                          <h4 className="font-serif-luxury font-bold text-base text-primary-gold mb-1 flex items-center gap-2">
+                            <span>Client Appointment Bookings</span>
+                            <span className="bg-[#a15a64] text-white text-[9px] font-mono px-2 py-0.5 rounded-full font-bold">LIVE SYNC</span>
+                          </h4>
+                          <p className="text-[11px] text-gray-500">View, search, confirm client bookings, and update reservation status directly in real-time.</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={refreshAppointments}
+                          className="px-3 py-1.5 bg-neutral-900 text-white font-btn text-[10px] uppercase font-bold rounded-full flex items-center space-x-1 cursor-pointer hover:bg-neutral-800 transition-all select-none shadow-sm"
+                        >
+                          <RotateCcw size={12} className={isAppointmentsLoading ? "animate-spin" : ""} />
+                          <span>Fetch Live List</span>
+                        </button>
                       </div>
-                      <p className="leading-relaxed">
-                        Your application is running in fully compliant Firebase Storage & Firestore mode! To enable live synchronization, please replace the placeholders in <code className="bg-amber-100 px-1 py-0.5 rounded font-mono font-bold text-amber-900">firebase-applet-config.json</code> with your actual project keys:
-                      </p>
-                      <div className="bg-amber-100/50 p-3 rounded-xl font-mono text-[10px] text-amber-900 grid grid-cols-1 sm:grid-cols-2 gap-2 border border-amber-200/50 select-all">
-                        <div>• apiKey</div>
-                        <div>• authDomain</div>
-                        <div>• projectId</div>
-                        <div>• storageBucket</div>
-                        <div>• messagingSenderId</div>
-                        <div>• appId</div>
+
+                      {/* Searches and filters */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <input
+                          type="text"
+                          placeholder="Search client by name, phone, or service..."
+                          value={appointmentSearchQuery}
+                          onChange={(e) => setAppointmentSearchQuery(e.target.value)}
+                          className="sm:col-span-2 px-3 py-2 bg-white border border-gray-200 focus:outline-primary-gold focus:ring-1 focus:ring-primary-gold rounded-xl text-xs text-luxury-text"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setAppointmentSearchQuery('')}
+                          className="px-3 py-2 border border-blue-50 bg-blue-50 text-[#a15a64] hover:bg-blue-100 text-xs font-bold rounded-xl active:scale-95 transition-all"
+                        >
+                          Clear Search
+                        </button>
                       </div>
-                      <p className="text-[10px] text-amber-700 leading-normal">
-                        Note: Once you supply these, all uploaded headers, gallery reels, founder quotes, and customer reviews will sync live and look identical on every phone and PC!
-                      </p>
+
+                      {isAppointmentsLoading ? (
+                        <div className="flex flex-col py-12 items-center justify-center space-y-2">
+                          <RotateCcw className="animate-spin text-primary-gold" size={24} />
+                          <p className="text-xs text-gray-400 font-mono tracking-wider uppercase">Retrieving client logs from storage...</p>
+                        </div>
+                      ) : (
+                        (() => {
+                          const query = appointmentSearchQuery.toLowerCase().trim();
+                          const filtered = appointmentsList.filter(app => {
+                            if (!query) return true;
+                            return (
+                              (app.name && app.name.toLowerCase().includes(query)) ||
+                              (app.phone && app.phone.includes(query)) ||
+                              (app.service && app.service.toLowerCase().includes(query))
+                            );
+                          });
+
+                          if (filtered.length === 0) {
+                            return (
+                              <div className="text-center py-12 bg-neutral-50 rounded-2xl border border-dashed border-gray-200">
+                                <p className="text-xs text-gray-400">No booking records found or match your search criteria.</p>
+                              </div>
+                            );
+                          }
+
+                          return (
+                            <div className="space-y-4">
+                              <div className="hidden md:block overflow-x-auto bg-white rounded-2xl border border-gray-100 shadow-sm">
+                                <table className="w-full text-left border-collapse text-xs">
+                                  <thead>
+                                    <tr className="bg-neutral-50 text-[10px] font-bold text-gray-400 uppercase tracking-wider border-b border-gray-100">
+                                      <th className="p-4">Customer</th>
+                                      <th className="p-4">Service</th>
+                                      <th className="p-4">Schedule</th>
+                                      <th className="p-4">Status</th>
+                                      <th className="p-4">Notes</th>
+                                      <th className="p-4 text-right">Actions</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-gray-50">
+                                    {filtered.map(app => (
+                                      <tr key={app.id} className="hover:bg-neutral-50/50 transition-all">
+                                        <td className="p-4">
+                                          <div className="font-semibold text-luxury-text">{app.name}</div>
+                                          <div className="text-[10px] font-mono text-gray-400">{app.phone}</div>
+                                        </td>
+                                        <td className="p-4 font-medium text-gray-700">
+                                          {app.service}
+                                        </td>
+                                        <td className="p-4">
+                                          <div className="font-medium text-gray-700">{app.date}</div>
+                                          <div className="text-[10px] text-primary-gold font-bold">{app.time}</div>
+                                        </td>
+                                        <td className="p-4">
+                                          <span className={`inline-block px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider ${
+                                            app.status === 'confirmed' ? 'bg-green-50 text-green-700 border border-green-200' :
+                                            app.status === 'completed' ? 'bg-blue-50 text-blue-700 border border-blue-200' :
+                                            app.status === 'cancelled' ? 'bg-red-50 text-red-700 border border-red-200' :
+                                            'bg-amber-50 text-amber-700 border border-amber-200'
+                                          }`}>
+                                            {app.status || 'pending'}
+                                          </span>
+                                        </td>
+                                        <td className="p-4 max-w-xs truncate text-[11px] text-gray-500 italic">
+                                          {app.notes || '—'}
+                                        </td>
+                                        <td className="p-4 text-right space-x-1.5 whitespace-nowrap">
+                                          {app.status !== 'confirmed' && app.status !== 'completed' && (
+                                            <button
+                                              onClick={async () => {
+                                                await updateAppointmentStatusInDb(app.id, 'confirmed');
+                                                refreshAppointments();
+                                              }}
+                                              className="px-2 py-1 bg-green-500 text-white rounded text-[9px] font-bold uppercase tracking-wider hover:opacity-95"
+                                            >
+                                              Confirm
+                                            </button>
+                                          )}
+                                          {app.status === 'confirmed' && (
+                                            <button
+                                              onClick={async () => {
+                                                await updateAppointmentStatusInDb(app.id, 'completed');
+                                                refreshAppointments();
+                                              }}
+                                              className="px-2 py-1 bg-blue-500 text-white rounded text-[9px] font-bold uppercase tracking-wider hover:opacity-95"
+                                            >
+                                              Complete
+                                            </button>
+                                          )}
+                                          {app.status !== 'cancelled' && app.status !== 'completed' && (
+                                            <button
+                                              onClick={async () => {
+                                                await updateAppointmentStatusInDb(app.id, 'cancelled');
+                                                refreshAppointments();
+                                              }}
+                                              className="px-2 py-1 bg-gray-100 text-gray-500 rounded text-[9px] font-bold uppercase tracking-wider hover:bg-gray-200"
+                                            >
+                                              Cancel
+                                            </button>
+                                          )}
+                                          <button
+                                            onClick={async () => {
+                                              if (window.confirm(`Delete appointment for ${app.name}?`)) {
+                                                await deleteAppointmentFromDb(app.id);
+                                                refreshAppointments();
+                                              }
+                                            }}
+                                            className="p-1 text-gray-400 hover:text-red-600 rounded bg-transparent border-0"
+                                            title="Delete appointment"
+                                          >
+                                            <Trash2 size={13} />
+                                          </button>
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+
+                              {/* Mobile View Card Grid */}
+                              <div className="md:hidden space-y-2">
+                                {filtered.map(app => (
+                                  <div key={app.id} className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm space-y-3">
+                                    <div className="flex justify-between items-start">
+                                      <div>
+                                        <div className="text-xs font-bold text-luxury-text">{app.name}</div>
+                                        <div className="text-[10px] font-mono text-gray-400">{app.phone}</div>
+                                      </div>
+                                      <span className={`px-2 py-0.5 rounded-full text-[8px] font-bold uppercase tracking-wider ${
+                                        app.status === 'confirmed' ? 'bg-green-50 text-green-700' :
+                                        app.status === 'completed' ? 'bg-blue-50 text-blue-700' :
+                                        app.status === 'cancelled' ? 'bg-red-50 text-red-700' :
+                                        'bg-amber-50 text-amber-700'
+                                      }`}>
+                                        {app.status || 'pending'}
+                                      </span>
+                                    </div>
+                                    <div className="text-xs text-gray-600">
+                                      <span className="font-semibold">Service:</span> {app.service}
+                                    </div>
+                                    <div className="text-xs text-gray-600">
+                                      <span className="font-semibold">Schedule:</span> {app.date} @ <span className="text-primary-gold font-bold">{app.time}</span>
+                                    </div>
+                                    {app.notes && (
+                                      <div className="text-[11px] text-gray-400 italic bg-neutral-50 p-2 rounded">
+                                        "{app.notes}"
+                                      </div>
+                                    )}
+                                    <div className="flex justify-end gap-1 pt-1.5 border-t border-gray-50 flex-wrap">
+                                      {app.status !== 'confirmed' && app.status !== 'completed' && (
+                                        <button
+                                          onClick={async () => {
+                                            await updateAppointmentStatusInDb(app.id, 'confirmed');
+                                            refreshAppointments();
+                                          }}
+                                          className="px-2 py-1 bg-green-500 text-white rounded text-[8px] font-bold uppercase"
+                                        >
+                                          Confirm
+                                        </button>
+                                      )}
+                                      {app.status === 'confirmed' && (
+                                        <button
+                                          onClick={async () => {
+                                            await updateAppointmentStatusInDb(app.id, 'completed');
+                                            refreshAppointments();
+                                          }}
+                                          className="px-2 py-1 bg-blue-500 text-white rounded text-[8px] font-bold uppercase"
+                                        >
+                                          Complete
+                                        </button>
+                                      )}
+                                      {app.status !== 'cancelled' && app.status !== 'completed' && (
+                                        <button
+                                          onClick={async () => {
+                                            await updateAppointmentStatusInDb(app.id, 'cancelled');
+                                            refreshAppointments();
+                                          }}
+                                          className="px-2 py-1 bg-gray-100 text-gray-500 rounded text-[8px] font-bold uppercase"
+                                        >
+                                          Cancel
+                                        </button>
+                                      )}
+                                      <button
+                                        onClick={async () => {
+                                          if (window.confirm(`Delete ${app.name}?`)) {
+                                            await deleteAppointmentFromDb(app.id);
+                                            refreshAppointments();
+                                          }
+                                        }}
+                                        className="p-1 text-gray-400 hover:text-red-600"
+                                      >
+                                        <Trash2 size={12} />
+                                      </button>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })()
+                      )}
                     </div>
                   )}
 
@@ -1989,16 +2308,56 @@ export default function AdminPanel({ currentConfig, onSave, onReset, isOpen, onC
                                     placeholder="e.g. https://www.youtube.com/embed/... or .mp4 link"
                                     className="w-full px-2 py-1 bg-neutral-50 border border-gray-200 focus:outline-[#C5A880] focus:bg-white rounded text-xs text-luxury-text"
                                   />
+                                  <div className="flex gap-2 items-center pt-2">
+                                    <label className="flex items-center space-x-1 px-2.5 py-1.5 bg-[#a15a64]/10 hover:bg-[#a15a64]/25 active:scale-95 text-[#a15a64] font-bold text-[9px] rounded-lg tracking-wider uppercase cursor-pointer border border-[#a15a64]/25 transition-all select-none">
+                                      <Upload size={11} />
+                                      <span>Upload Video File (.mp4)</span>
+                                      <input
+                                        type="file"
+                                        accept="video/*"
+                                        onChange={(e) => {
+                                          if (e.target.files?.[0]) {
+                                            handleDirectVideoUpload(v.id, e.target.files[0]);
+                                          }
+                                        }}
+                                        className="hidden"
+                                      />
+                                    </label>
+                                    {v.videoUrl && (v.videoUrl.startsWith('data:') || v.videoUrl.includes('firebasestorage') || v.videoUrl.includes('.mp4')) && (
+                                      <video 
+                                        src={v.videoUrl} 
+                                        className="w-16 h-10 rounded object-cover border border-neutral-200" 
+                                        controls 
+                                        muted 
+                                      />
+                                    )}
+                                  </div>
                                 </div>
 
                                 <div className="text-left opacity-95">
-                                  <label className="block text-[8px] font-bold text-gray-400 uppercase">Or Thumbnail Image Reference URL</label>
-                                  <input
-                                    type="text"
-                                    value={v.thumbnail}
-                                    onChange={(e) => updateVideoTestimonial(v.id, { thumbnail: e.target.value })}
-                                    className="w-full px-2 py-0.5 bg-transparent border-0 font-mono text-[9px] text-gray-400 focus:outline-none focus:border-b truncate text-left"
-                                  />
+                                  <label className="block text-[8px] font-bold text-gray-400 uppercase">Thumbnail Image (Cover)</label>
+                                  <div className="flex gap-2 items-center select-none">
+                                    <input
+                                      type="text"
+                                      value={v.thumbnail}
+                                      onChange={(e) => updateVideoTestimonial(v.id, { thumbnail: e.target.value })}
+                                      className="flex-1 px-2 py-1 bg-neutral-50 border border-gray-200 rounded text-xs text-luxury-text truncate"
+                                    />
+                                    <label className="flex items-center space-x-1 px-2 py-1.5 bg-primary-gold/10 hover:bg-primary-gold/20 active:scale-95 text-primary-gold font-bold text-[9px] rounded-lg tracking-wider uppercase cursor-pointer border border-primary-gold/20 transition-all select-none">
+                                      <Upload size={11} />
+                                      <span>Brush Cover</span>
+                                      <input
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={(e) => {
+                                          if (e.target.files?.[0]) {
+                                            handleVideoThumbnailUpload(v.id, e.target.files[0]);
+                                          }
+                                        }}
+                                        className="hidden"
+                                      />
+                                    </label>
+                                  </div>
                                 </div>
                               </div>
                             </div>
@@ -2394,6 +2753,51 @@ export default function AdminPanel({ currentConfig, onSave, onReset, isOpen, onC
               </>
             )}
 
+          </div>
+        </div>
+      )}
+
+      {/* Dynamic Client-Side Image Crop and Resize Overlays */}
+      {pendingCropFile && onCropConfirmCallback && (
+        <ImageCropperModal
+          file={pendingCropFile}
+          isOpen={true}
+          onClose={() => {
+            setPendingCropFile(null);
+            setOnCropConfirmCallback(null);
+          }}
+          onConfirm={(edited) => {
+            onCropConfirmCallback(edited);
+            setPendingCropFile(null);
+            setOnCropConfirmCallback(null);
+          }}
+        />
+      )}
+
+      {/* Cloud Synchronizing Loaders */}
+      {isSaving && (
+        <div id="save-loader-overlay" className="fixed inset-0 z-[110] flex flex-col items-center justify-center bg-black/70 backdrop-blur-xs select-none">
+          <div className="bg-[#FFFDF8] rounded-2xl p-6 shadow-2xl flex flex-col items-center space-y-4 max-w-xs border border-primary-gold/20 text-center animate-fade-in">
+            <RotateCcw className="animate-spin text-primary-gold" size={32} />
+            <div className="space-y-1">
+              <h4 className="font-serif-luxury font-bold text-sm text-luxury-text">Writing to Firestore</h4>
+              <p className="text-[11px] text-gray-500">Writing modified configurations securely to live Firestore modules...</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cloud Synchronization Success Banner */}
+      {showSaveSuccess && (
+        <div id="save-success-overlay" className="fixed inset-0 z-[110] flex flex-col items-center justify-center bg-black/70 backdrop-blur-xs select-none">
+          <div className="bg-[#FFFDF8] rounded-2xl p-6 shadow-2xl flex flex-col items-center space-y-4 max-w-xs border border-green-200 text-center animate-fade-in">
+            <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center text-white">
+              <Check size={22} />
+            </div>
+            <div className="space-y-1">
+              <h4 className="font-serif-luxury font-bold text-sm text-green-700">Database Synced!</h4>
+              <p className="text-[11px] text-gray-500">Every config change has been committed. Website updated instantly!</p>
+            </div>
           </div>
         </div>
       )}

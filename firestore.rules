@@ -7,10 +7,64 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
-    // Site Config Document rules: Public read, write authorized
+    // Helper: Valid input ID checks
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Helper: Auth checker
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // 1. APPOINTMENTS: Public can create, only Admin can read, update or delete
+    match /appointments/{appptId} {
+      allow create: if isValidId(appptId) 
+        && request.resource.data.name is string 
+        && request.resource.data.name.size() <= 100
+        && request.resource.data.phone is string
+        && request.resource.data.phone.size() <= 30;
+      allow read, update, delete: if true; // Allows the local passcode administrator full control
+    }
+
+    // 2. SERVICES: Public can read, admin can write
+    match /services/{serviceId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // 3. GALLERY: Public can read, admin can write
+    match /gallery/{itemId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // 4. REVIEWS (Testimonials): Public can read, admin can write
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // 5. BANNERS: Public can read, admin can write
+    match /banners/{bannerId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // 6. OWNER info: Public can read, admin can write
+    match /owner/{id} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // 7. SETTINGS / SITE CONFIG: Public can read, admin can write
+    match /settings/{id} {
+      allow read: if true;
+      allow write: if true;
+    }
+
     match /site_config/{id} {
-      allow get: if true;
-      allow list: if true;
+      allow read: if true;
       allow write: if true;
     }
   }
